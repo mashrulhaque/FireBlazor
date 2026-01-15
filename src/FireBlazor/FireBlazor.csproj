@@ -8,13 +8,14 @@
 
     <!-- Package metadata -->
     <PackageId>FireBlazor</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>FireBlazor Contributors</Authors>
     <Description>Firebase for Blazor - Zero boilerplate, delightful DX</Description>
     <PackageTags>blazor;firebase;firestore;firebase-auth;firebase-storage;realtime-database;blazor-webassembly;dotnet;gemini;firebase-ai;app-check;wasm;authentication;cloud-firestore</PackageTags>
     <RepositoryUrl>https://github.com/mashrulhaque/FireBlazor</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/mashrulhaque/FireBlazor</PackageProjectUrl>
 
     <!-- Source Link for debugging -->
@@ -26,6 +27,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="" />
+    <None Include="icon.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
