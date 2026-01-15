@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FireBlazor App Check Documentation - reCAPTCHA integration for Firebase backend protection in Blazor WebAssembly applications.">
+    <title>App Check - FireBlazor Documentation</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">F</span>
+                <span>FireBlazor</span>
+            </a>
+
+            <nav class="nav">
+                <a href="index.html" class="nav-link">Home</a>
+                <div class="dropdown">
+                    <span class="nav-link dropdown-trigger active">Docs</span>
+                    <div class="dropdown-menu">
+                        <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+                        <a href="authentication.html" class="dropdown-item">Authentication</a>
+                        <a href="firestore.html" class="dropdown-item">Cloud Firestore</a>
+                        <a href="storage.html" class="dropdown-item">Cloud Storage</a>
+                        <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+                        <a href="ai-logic.html" class="dropdown-item">AI Logic</a>
+                        <a href="app-check.html" class="dropdown-item active">App Check</a>
+                    </div>
+                </div>
+                <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+            </nav>
+
+            <button class="mobile-menu-btn sidebar-toggle" aria-label="Toggle menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Documentation Layout -->
+    <div class="docs-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h4 class="sidebar-title">App Check</h4>
+                <ul class="sidebar-nav">
+                    <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+                    <li><a href="#configuration" class="sidebar-link">Configuration</a></li>
+                    <li><a href="#get-token" class="sidebar-link">Get Token</a></li>
+                    <li><a href="#token-changes" class="sidebar-link">Token Changes</a></li>
+                    <li><a href="#check-status" class="sidebar-link">Check Status</a></li>
+                    <li><a href="#error-handling" class="sidebar-link">Error Handling</a></li>
+                    <li><a href="#best-practices" class="sidebar-link">Best Practices</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <h4 class="sidebar-title">Related</h4>
+                <ul class="sidebar-nav">
+                    <li><a href="authentication.html" class="sidebar-link">Authentication</a></li>
+                    <li><a href="firestore.html" class="sidebar-link">Cloud Firestore</a></li>
+                    <li><a href="ai-logic.html" class="sidebar-link">AI Logic</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Sidebar Overlay for Mobile -->
+        <div class="sidebar-overlay"></div>
+
+        <!-- Main Content -->
+        <main class="docs-content">
+            <div class="docs-header">
+                <h1>App Check</h1>
+                <p>Protect your Firebase backend resources from abuse with reCAPTCHA v3 or reCAPTCHA Enterprise integration.</p>
+            </div>
+
+            <!-- Overview Section -->
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>Firebase App Check helps protect your backend resources (Cloud Firestore, Realtime Database, Cloud Storage, Cloud Functions) from abuse by attesting that incoming traffic is coming from your app running on a genuine, untampered device.</p>
+
+                <p>FireBlazor provides seamless integration with App Check using <strong>reCAPTCHA v3</strong> for web applications. For production environments, you can also use <strong>reCAPTCHA Enterprise</strong> for enhanced protection and additional features.</p>
+
+                <div class="callout callout-warning">
+                    <div class="callout-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        Important: Enable App Check First
+                    </div>
+                    <p>You must enable App Check in the Firebase Console for your project before using it in your application. Navigate to <strong>App Check</strong> in the Firebase Console, register your app, and obtain your reCAPTCHA site key.</p>
+                </div>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>reCAPTCHA v3 Integration</strong> - Invisible reCAPTCHA protection for web apps</li>
+                    <li><strong>reCAPTCHA Enterprise</strong> - Enhanced protection for production environments</li>
+                    <li><strong>Automatic Token Refresh</strong> - Tokens are automatically refreshed before expiration</li>
+                    <li><strong>Token Change Events</strong> - Subscribe to token updates for custom handling</li>
+                    <li><strong>Status Monitoring</strong> - Check activation status and current state</li>
+                </ul>
+            </section>
+
+            <!-- Configuration Section -->
+            <section id="configuration">
+                <h2>Configuration</h2>
+                <p>Configure App Check in your <code>Program.cs</code> when setting up Firebase services. Use the <code>UseAppCheck</code> method with your reCAPTCHA site key.</p>
+
+                <h3>Basic Setup with reCAPTCHA v3</h3>
+                <pre><code><span class="comment">// Program.cs</span>
+<span class="keyword">var</span> builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+builder.Services.AddFirebase(options => options
+    .WithProject(<span class="string">"your-project-id"</span>)
+    .WithApiKey(<span class="string">"your-api-key"</span>)
+    .WithAuthDomain(<span class="string">"your-project.firebaseapp.com"</span>)
+    .WithStorageBucket(<span class="string">"your-project.firebasestorage.app"</span>)
+    .WithDatabaseUrl(<span class="string">"https://your-project.firebasedatabase.app"</span>)
+    .UseAuth(auth => auth
+        .EnableEmailPassword()
+        .EnableGoogle(<span class="string">"google-client-id"</span>))
+    .UseFirestore()
+    .UseStorage()
+    .UseRealtimeDatabase()
+    .UseAppCheck(appCheck => appCheck
+        .ReCaptchaV3(<span class="string">"your-recaptcha-site-key"</span>)));
+
+<span class="comment">// Optional: Enable Blazor authorization</span>
+builder.Services.AddFirebaseAuthorization(options =>
+{
+    options.LoginPath = <span class="string">"/login"</span>;
+    options.AccessDeniedPath = <span class="string">"/access-denied"</span>;
+});</code></pre>
+
+                <div class="callout callout-info">
+                    <div class="callout-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        Getting Your reCAPTCHA Site Key
+                    </div>
+                    <p>To obtain a reCAPTCHA site key, go to the <a href="https://www.google.com/recaptcha/admin" target="_blank">reCAPTCHA Admin Console</a>, create a new site with reCAPTCHA v3, and copy the site key. For reCAPTCHA Enterprise, use the Google Cloud Console.</p>
+                </div>
+            </section>
+
+            <!-- Get Token Section -->
+            <section id="get-token">
+                <h2>Get Token</h2>
+                <p>Use <code>GetTokenAsync()</code> to retrieve the current App Check token. This token can be sent to your backend services for verification.</p>
+
+                <pre><code><span class="keyword">@inject</span> IFirebase Firebase
+
+<span class="keyword">@code</span> {
+    <span class="keyword">private async</span> Task GetAppCheckToken()
+    {
+        <span class="comment">// Get App Check token</span>
+        <span class="keyword">var</span> tokenResult = <span class="keyword">await</span> Firebase.AppCheck.GetTokenAsync();
+
+        <span class="keyword">if</span> (tokenResult.IsSuccess)
+        {
+            <span class="keyword">var</span> token = tokenResult.Value;
+            Console.WriteLine(<span class="string">$"Token: {token.Token}"</span>);
+            Console.WriteLine(<span class="string">$"Expires: {token.ExpirationTime}"</span>);
+
+            <span class="comment">// Use token for backend API calls</span>
+            <span class="keyword">await</span> CallProtectedApiAsync(token.Token);
+        }
+        <span class="keyword">else</span>
+        {
+            Console.WriteLine(<span class="string">$"Error: {tokenResult.Error.Message}"</span>);
+        }
+    }
+
+    <span class="keyword">private async</span> Task CallProtectedApiAsync(<span class="type">string</span> appCheckToken)
+    {
+        <span class="comment">// Include the App Check token in your API requests</span>
+        httpClient.DefaultRequestHeaders.Add(<span class="string">"X-Firebase-AppCheck"</span>, appCheckToken);
+        <span class="keyword">var</span> response = <span class="keyword">await</span> httpClient.GetAsync(<span class="string">"/api/protected"</span>);
+    }
+}</code></pre>
+
+                <h3>Token Properties</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Token</code></td>
+                            <td><code>string</code></td>
+                            <td>The App Check token string to send to your backend</td>
+                        </tr>
+                        <tr>
+                            <td><code>ExpirationTime</code></td>
+                            <td><code>DateTime</code></td>
+                            <td>When the token expires (typically 1 hour from issuance)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Token Changes Section -->
+            <section id="token-changes">
+                <h2>Token Changes</h2>
+                <p>Subscribe to the <code>OnTokenChanged</code> event to receive notifications when the App Check token is refreshed. This is useful for updating cached tokens or triggering re-authentication flows.</p>
+
+                <pre><code><span class="keyword">@inject</span> IFirebase Firebase
+<span class="keyword">@implements</span> IDisposable
+
+<span class="keyword">@code</span> {
+    <span class="keyword">protected override void</span> OnInitialized()
+    {
+        <span class="comment">// Subscribe to token changes</span>
+        Firebase.AppCheck.OnTokenChanged += HandleTokenChanged;
+    }
+
+    <span class="keyword">private void</span> HandleTokenChanged(AppCheckToken? token)
+    {
+        <span class="keyword">if</span> (token != <span class="keyword">null</span>)
+        {
+            Console.WriteLine(<span class="string">$"New token received"</span>);
+            Console.WriteLine(<span class="string">$"Expires at: {token.ExpirationTime}"</span>);
+
+            <span class="comment">// Calculate time until expiration</span>
+            <span class="keyword">var</span> timeUntilExpiry = token.ExpirationTime - DateTime.UtcNow;
+            Console.WriteLine(<span class="string">$"Valid for: {timeUntilExpiry.TotalMinutes:F0} minutes"</span>);
+        }
+        <span class="keyword">else</span>
+        {
+            Console.WriteLine(<span class="string">"Token was invalidated"</span>);
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    <span class="keyword">public void</span> Dispose()
+    {
+        <span class="comment">// Always unsubscribe to prevent memory leaks</span>
+        Firebase.AppCheck.OnTokenChanged -= HandleTokenChanged;
+    }
+}</code></pre>
+
+                <div class="callout callout-success">
+                    <div class="callout-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Automatic Token Refresh
+                    </div>
+                    <p>FireBlazor automatically refreshes App Check tokens before they expire. The <code>OnTokenChanged</code> event fires whenever a new token is obtained, allowing you to update any cached tokens in your application.</p>
+                </div>
+            </section>
+
+            <!-- Check Status Section -->
+            <section id="check-status">
+                <h2>Check Status</h2>
+                <p>Monitor the App Check activation status and current state using the <code>IsActivated</code> and <code>Status</code> properties.</p>
+
+                <pre><code><span class="keyword">@inject</span> IFirebase Firebase
+
+<span class="keyword">@code</span> {
+    <span class="keyword">private void</span> CheckAppCheckStatus()
+    {
+        <span class="comment">// Check if App Check is activated</span>
+        <span class="keyword">if</span> (Firebase.AppCheck.IsActivated)
+        {
+            Console.WriteLine(<span class="string">"App Check is active"</span>);
+            Console.WriteLine(<span class="string">$"Current status: {Firebase.AppCheck.Status}"</span>);
+        }
+        <span class="keyword">else</span>
+        {
+            Console.WriteLine(<span class="string">"App Check is not activated"</span>);
+        }
+    }
+}</code></pre>
+
+                <h3>Status Properties</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>IsActivated</code></td>
+                            <td><code>bool</code></td>
+                            <td>Returns <code>true</code> if App Check has been successfully initialized</td>
+                        </tr>
+                        <tr>
+                            <td><code>Status</code></td>
+                            <td><code>AppCheckStatus</code></td>
+                            <td>Current status: <code>NotInitialized</code>, <code>Initializing</code>, <code>Ready</code>, or <code>Error</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Error Handling Section -->
+            <section id="error-handling">
+                <h2>Error Handling</h2>
+                <p>FireBlazor uses a <code>Result&lt;T&gt;</code> pattern for error handling, providing a functional approach without exceptions. This pattern works consistently across all Firebase services, including App Check.</p>
+
+                <h3>Pattern Matching</h3>
+                <pre><code><span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.AppCheck.GetTokenAsync();
+
+<span class="comment">// Pattern matching approach</span>
+<span class="keyword">var</span> message = result.Match(
+    onSuccess: token => <span class="string">$"Token valid until {token.ExpirationTime}"</span>,
+    onFailure: error => <span class="string">$"Error: {error.Message}"</span>
+);
+
+Console.WriteLine(message);</code></pre>
+
+                <h3>Imperative Style</h3>
+                <pre><code><span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.AppCheck.GetTokenAsync();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> token = result.Value;
+    Console.WriteLine(<span class="string">$"Token: {token.Token}"</span>);
+}
+<span class="keyword">else</span>
+{
+    <span class="keyword">var</span> error = result.Error;
+    Console.WriteLine(<span class="string">$"[{error.Code}] {error.Message}"</span>);
+
+    <span class="comment">// Handle specific error codes</span>
+    <span class="keyword">switch</span> (error.Code)
+    {
+        <span class="keyword">case</span> <span class="string">"app-check/not-initialized"</span>:
+            <span class="comment">// App Check not configured properly</span>
+            <span class="keyword">break</span>;
+        <span class="keyword">case</span> <span class="string">"app-check/recaptcha-error"</span>:
+            <span class="comment">// reCAPTCHA failed to load or verify</span>
+            <span class="keyword">break</span>;
+        <span class="keyword">default</span>:
+            <span class="comment">// Other errors</span>
+            <span class="keyword">break</span>;
+    }
+}</code></pre>
+
+                <h3>Exception Style</h3>
+                <pre><code><span class="keyword">try</span>
+{
+    <span class="comment">// OrThrow() throws FirebaseException on failure</span>
+    <span class="keyword">var</span> token = <span class="keyword">await</span> Firebase.AppCheck.GetTokenAsync().OrThrow();
+    Console.WriteLine(<span class="string">$"Token obtained: {token.Token}"</span>);
+}
+<span class="keyword">catch</span> (FirebaseException ex)
+{
+    Console.WriteLine(<span class="string">$"Firebase error: {ex.Message}"</span>);
+}</code></pre>
+
+                <h3>Common Error Codes</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Error Code</th>
+                            <th>Description</th>
+                            <th>Resolution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>app-check/not-initialized</code></td>
+                            <td>App Check was not properly configured</td>
+                            <td>Ensure <code>UseAppCheck()</code> is called during setup</td>
+                        </tr>
+                        <tr>
+                            <td><code>app-check/recaptcha-error</code></td>
+                            <td>reCAPTCHA verification failed</td>
+                            <td>Check your site key and domain configuration</td>
+                        </tr>
+                        <tr>
+                            <td><code>app-check/token-expired</code></td>
+                            <td>The App Check token has expired</td>
+                            <td>Call <code>GetTokenAsync()</code> to get a fresh token</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Best Practices Section -->
+            <section id="best-practices">
+                <h2>Best Practices</h2>
+                <p>Follow these recommendations to get the most out of App Check in your FireBlazor application.</p>
+
+                <h3>1. Enable App Check in Firebase Console First</h3>
+                <p>Before implementing App Check in your code, you must:</p>
+                <ul>
+                    <li>Navigate to the Firebase Console and select your project</li>
+                    <li>Go to <strong>App Check</strong> in the left sidebar</li>
+                    <li>Register your app with the appropriate attestation provider</li>
+                    <li>Obtain your reCAPTCHA site key</li>
+                    <li>Enable enforcement for the Firebase services you want to protect</li>
+                </ul>
+
+                <h3>2. Use reCAPTCHA Enterprise for Production</h3>
+                <p>While reCAPTCHA v3 works well for development and testing, consider upgrading to <strong>reCAPTCHA Enterprise</strong> for production applications:</p>
+                <ul>
+                    <li>Enhanced bot detection algorithms</li>
+                    <li>More granular risk scores</li>
+                    <li>Better analytics and insights</li>
+                    <li>Higher request quotas</li>
+                    <li>SLA guarantees</li>
+                </ul>
+
+                <h3>3. Token Refresh is Automatic</h3>
+                <p>FireBlazor handles token refresh automatically. You don't need to implement your own refresh logic. However, you should:</p>
+                <ul>
+                    <li>Subscribe to <code>OnTokenChanged</code> if you cache tokens locally</li>
+                    <li>Always use fresh tokens for sensitive operations</li>
+                    <li>Handle token retrieval errors gracefully</li>
+                </ul>
+
+                <h3>4. Implement Graceful Degradation</h3>
+                <pre><code><span class="keyword">private async</span> Task<span class="operator">&lt;</span><span class="type">bool</span><span class="operator">&gt;</span> TryGetAppCheckToken()
+{
+    <span class="keyword">if</span> (!Firebase.AppCheck.IsActivated)
+    {
+        <span class="comment">// App Check not configured - decide how to handle</span>
+        <span class="keyword">return false</span>;
+    }
+
+    <span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.AppCheck.GetTokenAsync();
+
+    <span class="keyword">return</span> result.Match(
+        onSuccess: token => {
+            <span class="comment">// Token obtained successfully</span>
+            _currentToken = token.Token;
+            <span class="keyword">return true</span>;
+        },
+        onFailure: error => {
+            <span class="comment">// Log error but don't block user</span>
+            _logger.LogWarning(<span class="string">"App Check token failed: {Error}"</span>, error.Message);
+            <span class="keyword">return false</span>;
+        }
+    );
+}</code></pre>
+
+                <h3>5. Test with Emulators</h3>
+                <p>When using Firebase emulators, App Check is automatically bypassed. This allows you to develop and test your application without needing valid App Check tokens during local development.</p>
+
+                <div class="callout callout-info">
+                    <div class="callout-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        Debug Token for Testing
+                    </div>
+                    <p>For testing in non-production environments, you can register a debug token in the Firebase Console. This allows you to test App Check enforcement without needing reCAPTCHA verification.</p>
+                </div>
+            </section>
+
+            <!-- Page Navigation -->
+            <nav class="page-nav">
+                <a href="ai-logic.html" class="page-nav-link prev">
+                    <span class="page-nav-label">Previous</span>
+                    <span class="page-nav-title">AI Logic</span>
+                </a>
+            </nav>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-logo">
+                <span class="logo-icon">F</span>
+                <span>FireBlazor</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+                <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+                <a href="https://github.com/mashrulhaque/FireBlazor/issues" class="footer-link" target="_blank">Issues</a>
+            </div>
+            <div class="footer-copyright">
+                MIT License - Built for Blazor developers
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+</body>
+</html>

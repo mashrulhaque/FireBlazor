@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cloud Firestore documentation for FireBlazor - LINQ-style queries, real-time subscriptions, transactions, and batch operations for Blazor WebAssembly">
+  <title>Cloud Firestore - FireBlazor Documentation</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">&#128293;</span>
+        <span>FireBlazor</span>
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger active">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item active">Cloud Firestore</a>
+            <a href="storage.html" class="dropdown-item">Cloud Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">Firebase AI Logic</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="nav-link" target="_blank">NuGet</a>
+      </nav>
+
+      <button class="mobile-menu-btn sidebar-toggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Cloud Firestore</h4>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+          <li><a href="#crud-operations" class="sidebar-link">CRUD Operations</a></li>
+          <li><a href="#querying" class="sidebar-link">Querying</a></li>
+          <li><a href="#realtime-subscriptions" class="sidebar-link">Real-time Subscriptions</a></li>
+          <li><a href="#transactions" class="sidebar-link">Transactions</a></li>
+          <li><a href="#batch-operations" class="sidebar-link">Batch Operations</a></li>
+          <li><a href="#field-values" class="sidebar-link">Field Values</a></li>
+          <li><a href="#aggregate-queries" class="sidebar-link">Aggregate Queries</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Related</h4>
+        <ul class="sidebar-nav">
+          <li><a href="authentication.html" class="sidebar-link">Authentication</a></li>
+          <li><a href="storage.html" class="sidebar-link">Cloud Storage</a></li>
+          <li><a href="realtime-database.html" class="sidebar-link">Realtime Database</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Cloud Firestore</h1>
+        <p>A flexible, scalable NoSQL cloud database with LINQ-style queries, real-time subscriptions, transactions, and batch operations for Blazor WebAssembly applications.</p>
+      </div>
+
+      <!-- Overview Section -->
+      <section id="overview">
+        <h2>Overview</h2>
+        <p>FireBlazor provides a powerful, type-safe interface to Cloud Firestore that feels native to .NET developers. Instead of working with JavaScript-style string queries, you can use familiar LINQ patterns to build your queries.</p>
+
+        <h3>Key Features</h3>
+        <ul>
+          <li><strong>LINQ-style queries</strong> - Use <code>Where</code>, <code>OrderBy</code>, and <code>Take</code> with lambda expressions</li>
+          <li><strong>Real-time subscriptions</strong> - Listen to document and collection changes with <code>OnSnapshot</code></li>
+          <li><strong>Transactions</strong> - Perform atomic read-modify-write operations</li>
+          <li><strong>Batch operations</strong> - Execute multiple write operations as a single atomic unit</li>
+          <li><strong>Field values</strong> - Server timestamps, atomic increments, and array operations</li>
+          <li><strong>Aggregate queries</strong> - Count, sum, and average operations</li>
+        </ul>
+      </section>
+
+      <!-- CRUD Operations Section -->
+      <section id="crud-operations">
+        <h2>CRUD Operations</h2>
+        <p>FireBlazor provides intuitive methods for Create, Read, Update, and Delete operations on your Firestore documents.</p>
+
+        <h3>Create</h3>
+        <p>Add new documents to a collection using <code>AddAsync</code>. Firestore will automatically generate a unique document ID.</p>
+        <pre><code><span class="comment">// Create a new document with auto-generated ID</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .AddAsync(<span class="keyword">new</span> <span class="type">TodoItem</span> { Title = <span class="string">"Buy groceries"</span>, Completed = <span class="keyword">false</span> });
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> documentId = result.Value.Id;
+    Console.WriteLine(<span class="string">$"Created document: {documentId}"</span>);
+}</code></pre>
+
+        <h3>Read</h3>
+        <p>Query documents using LINQ-style methods. Chain <code>Where</code>, <code>OrderBy</code>, and <code>Take</code> to filter and sort your results.</p>
+        <pre><code><span class="comment">// Read documents with filtering, ordering, and pagination</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Where(t =&gt; t.Completed == <span class="keyword">false</span>)
+    .OrderBy(t =&gt; t.CreatedAt)
+    .Take(<span class="number">10</span>)
+    .GetAsync();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">foreach</span> (<span class="keyword">var</span> todo <span class="keyword">in</span> result.Value)
+    {
+        Console.WriteLine(todo.Data.Title);
+    }
+}</code></pre>
+
+        <h3>Update</h3>
+        <p>Update specific fields in a document using <code>UpdateAsync</code>. Only the specified fields will be modified.</p>
+        <pre><code><span class="comment">// Update specific fields in a document</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Document(<span class="string">"doc-id"</span>)
+    .UpdateAsync(<span class="keyword">new</span> { Completed = <span class="keyword">true</span> });
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    Console.WriteLine(<span class="string">"Document updated successfully"</span>);
+}</code></pre>
+
+        <h3>Delete</h3>
+        <p>Remove documents from a collection using <code>DeleteAsync</code>.</p>
+        <pre><code><span class="comment">// Delete a document</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Document(<span class="string">"doc-id"</span>)
+    .DeleteAsync();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    Console.WriteLine(<span class="string">"Document deleted successfully"</span>);
+}</code></pre>
+      </section>
+
+      <!-- Querying Section -->
+      <section id="querying">
+        <h2>Querying</h2>
+        <p>FireBlazor supports powerful LINQ-style queries that feel natural to .NET developers. Build complex queries by chaining methods together.</p>
+
+        <h3>Basic Filtering</h3>
+        <pre><code><span class="comment">// Filter with Where clause</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Where(t =&gt; t.UserId == currentUserId)
+    .Where(t =&gt; t.Priority &gt; <span class="number">3</span>)
+    .GetAsync();</code></pre>
+
+        <h3>Ordering and Pagination</h3>
+        <pre><code><span class="comment">// Order results and limit count</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Where(t =&gt; t.Completed == <span class="keyword">false</span>)
+    .OrderBy(t =&gt; t.CreatedAt)
+    .Take(<span class="number">10</span>)
+    .GetAsync();</code></pre>
+
+        <h3>Descending Order</h3>
+        <pre><code><span class="comment">// Sort in descending order</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .OrderByDescending(t =&gt; t.CreatedAt)
+    .Take(<span class="number">20</span>)
+    .GetAsync();</code></pre>
+      </section>
+
+      <!-- Real-time Subscriptions Section -->
+      <section id="realtime-subscriptions">
+        <h2>Real-time Subscriptions</h2>
+        <p>Listen to real-time changes in your Firestore data using <code>OnSnapshot</code>. The callback is invoked whenever the data changes, allowing your UI to stay in sync automatically.</p>
+
+        <h3>Subscribe to Collection Changes</h3>
+        <pre><code><span class="comment">// Subscribe to real-time updates</span>
+<span class="keyword">var</span> unsubscribe = Firebase.Firestore
+    .Collection&lt;<span class="type">TodoItem</span>&gt;(<span class="string">"todos"</span>)
+    .Where(t =&gt; t.UserId == currentUserId)
+    .OnSnapshot(
+        snapshot =&gt; {
+            _items = snapshot.ToList();
+            InvokeAsync(StateHasChanged);
+        },
+        error =&gt; Console.WriteLine(error.Message));
+
+<span class="comment">// Later: clean up the subscription</span>
+unsubscribe();</code></pre>
+
+        <h3>Using with FirebaseComponentBase</h3>
+        <p>For automatic subscription cleanup, use the <code>FirebaseComponentBase</code> class:</p>
+        <pre><code><span class="keyword">@inherits</span> FirebaseComponentBase
+
+<span class="keyword">@code</span> {
+    <span class="keyword">protected override async</span> Task OnInitializedAsync()
+    {
+        <span class="keyword">var</span> unsubscribe = Firebase.Firestore
+            .Collection&lt;<span class="type">Item</span>&gt;(<span class="string">"items"</span>)
+            .OnSnapshot(snapshot =&gt; { <span class="comment">/* handle updates */</span> });
+
+        Subscribe(unsubscribe); <span class="comment">// Automatically cleaned up on dispose</span>
+    }
+}</code></pre>
+      </section>
+
+      <!-- Transactions Section -->
+      <section id="transactions">
+        <h2>Transactions</h2>
+        <p>Transactions allow you to perform multiple read and write operations atomically. If any operation fails, the entire transaction is rolled back.</p>
+
+        <pre><code><span class="comment">// Transfer funds between accounts atomically</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore.TransactionAsync&lt;<span class="type">string</span>&gt;(<span class="keyword">async</span> tx =&gt;
+{
+    <span class="keyword">var</span> fromDoc = Firebase.Firestore.Collection&lt;<span class="type">Account</span>&gt;(<span class="string">"accounts"</span>).Document(<span class="string">"from"</span>);
+    <span class="keyword">var</span> toDoc = Firebase.Firestore.Collection&lt;<span class="type">Account</span>&gt;(<span class="string">"accounts"</span>).Document(<span class="string">"to"</span>);
+
+    <span class="keyword">var</span> fromSnap = <span class="keyword">await</span> tx.GetAsync(fromDoc);
+    <span class="keyword">var</span> toSnap = <span class="keyword">await</span> tx.GetAsync(toDoc);
+
+    tx.Update(fromDoc, <span class="keyword">new</span> { Balance = fromSnap.Value.Data.Balance - <span class="number">100</span> });
+    tx.Update(toDoc, <span class="keyword">new</span> { Balance = toSnap.Value.Data.Balance + <span class="number">100</span> });
+
+    <span class="keyword">return</span> <span class="string">"Transfer complete"</span>;
+});</code></pre>
+
+        <div class="callout callout-success">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Best Practice
+          </div>
+          <p>Use transactions for atomic operations that depend on reading the current state before writing. This ensures data consistency even when multiple clients are updating the same documents simultaneously.</p>
+        </div>
+      </section>
+
+      <!-- Batch Operations Section -->
+      <section id="batch-operations">
+        <h2>Batch Operations</h2>
+        <p>Batch operations allow you to perform multiple write operations as a single atomic unit. Unlike transactions, batches don't support reads, but they're more efficient for bulk writes.</p>
+
+        <pre><code><span class="comment">// Perform multiple writes atomically</span>
+<span class="keyword">var</span> collection = Firebase.Firestore.Collection&lt;<span class="type">Item</span>&gt;(<span class="string">"items"</span>);
+
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Firestore.BatchAsync(batch =&gt;
+{
+    <span class="comment">// Set a new document</span>
+    batch.Set(collection.Document(<span class="string">"doc1"</span>), item1);
+
+    <span class="comment">// Update an existing document</span>
+    batch.Update(collection.Document(<span class="string">"doc2"</span>), <span class="keyword">new</span> { Status = <span class="string">"updated"</span> });
+
+    <span class="comment">// Delete a document</span>
+    batch.Delete(collection.Document(<span class="string">"doc3"</span>));
+});</code></pre>
+
+        <h3>Batch vs Transaction</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Batch</th>
+              <th>Transaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Reads</td>
+              <td>No</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Writes</td>
+              <td>Yes</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Atomic</td>
+              <td>Yes</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Use Case</td>
+              <td>Bulk writes</td>
+              <td>Read-modify-write</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Field Values Section -->
+      <section id="field-values">
+        <h2>Field Values</h2>
+        <p>FireBlazor provides special field values for common operations that need to be handled server-side.</p>
+
+        <h3>ServerTimestamp</h3>
+        <p>Set a field to the server's current timestamp. Useful for tracking when documents were created or modified.</p>
+        <pre><code><span class="comment">// Set field to server timestamp</span>
+<span class="keyword">await</span> docRef.UpdateAsync(<span class="keyword">new</span> { UpdatedAt = FieldValue.ServerTimestamp() });</code></pre>
+
+        <h3>Increment</h3>
+        <p>Atomically increment or decrement a numeric field without reading the current value first.</p>
+        <pre><code><span class="comment">// Atomically increment a counter</span>
+<span class="keyword">await</span> docRef.UpdateAsync(<span class="keyword">new</span> { ViewCount = FieldValue.Increment(<span class="number">1</span>) });
+
+<span class="comment">// Decrement by using a negative value</span>
+<span class="keyword">await</span> docRef.UpdateAsync(<span class="keyword">new</span> { Stock = FieldValue.Increment(<span class="number">-1</span>) });</code></pre>
+
+        <h3>ArrayUnion</h3>
+        <p>Add elements to an array field without overwriting existing elements. Duplicates are automatically ignored.</p>
+        <pre><code><span class="comment">// Add element to array (ignores duplicates)</span>
+<span class="keyword">await</span> docRef.UpdateAsync(<span class="keyword">new</span> { Tags = FieldValue.ArrayUnion(<span class="string">"new-tag"</span>) });</code></pre>
+
+        <h3>ArrayRemove</h3>
+        <p>Remove elements from an array field.</p>
+        <pre><code><span class="comment">// Remove element from array</span>
+<span class="keyword">await</span> docRef.UpdateAsync(<span class="keyword">new</span> { Tags = FieldValue.ArrayRemove(<span class="string">"old-tag"</span>) });</code></pre>
+      </section>
+
+      <!-- Aggregate Queries Section -->
+      <section id="aggregate-queries">
+        <h2>Aggregate Queries</h2>
+        <p>Perform server-side aggregations without downloading all documents. This is much more efficient for large collections.</p>
+
+        <h3>CountAsync</h3>
+        <p>Get the count of documents matching a query.</p>
+        <pre><code><span class="comment">// Count documents in a collection</span>
+<span class="keyword">var</span> count = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">Item</span>&gt;(<span class="string">"items"</span>)
+    .Aggregate()
+    .CountAsync();</code></pre>
+
+        <h3>SumAsync</h3>
+        <p>Calculate the sum of a numeric field across all matching documents.</p>
+        <pre><code><span class="comment">// Sum a numeric field</span>
+<span class="keyword">var</span> total = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">Order</span>&gt;(<span class="string">"orders"</span>)
+    .Aggregate()
+    .SumAsync(<span class="string">"amount"</span>);</code></pre>
+
+        <h3>AverageAsync</h3>
+        <p>Calculate the average of a numeric field across all matching documents.</p>
+        <pre><code><span class="comment">// Calculate average</span>
+<span class="keyword">var</span> avg = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">Product</span>&gt;(<span class="string">"products"</span>)
+    .Aggregate()
+    .AverageAsync(<span class="string">"price"</span>);</code></pre>
+
+        <h3>Combined Aggregations</h3>
+        <pre><code><span class="comment">// You can also filter before aggregating</span>
+<span class="keyword">var</span> activeUserCount = <span class="keyword">await</span> Firebase.Firestore
+    .Collection&lt;<span class="type">User</span>&gt;(<span class="string">"users"</span>)
+    .Where(u =&gt; u.IsActive == <span class="keyword">true</span>)
+    .Aggregate()
+    .CountAsync();</code></pre>
+      </section>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <a href="authentication.html" class="page-nav-link prev">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">&larr; Authentication</span>
+        </a>
+        <a href="storage.html" class="page-nav-link next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Storage &rarr;</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>&#128293;</span>
+        <span>FireBlazor</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/issues" class="footer-link" target="_blank">Issues</a>
+      </div>
+      <div class="footer-copyright">
+        &copy; 2024 FireBlazor. MIT License.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FireBlazor Realtime Database documentation - Real-time synchronization, presence detection, and offline support for Blazor WebAssembly">
+  <title>Realtime Database - FireBlazor Documentation</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">F</span>
+        <span>FireBlazor</span>
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger active">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Cloud Firestore</a>
+            <a href="storage.html" class="dropdown-item">Cloud Storage</a>
+            <a href="realtime-database.html" class="dropdown-item active">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">AI Logic</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="nav-link" target="_blank">NuGet</a>
+      </nav>
+
+      <button class="mobile-menu-btn sidebar-toggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">On This Page</h4>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+          <li><a href="#basic-operations" class="sidebar-link">Basic Operations</a></li>
+          <li><a href="#set-data" class="sidebar-link nested">Set Data</a></li>
+          <li><a href="#push-data" class="sidebar-link nested">Push Data</a></li>
+          <li><a href="#get-data" class="sidebar-link nested">Get Data</a></li>
+          <li><a href="#update-data" class="sidebar-link nested">Update Data</a></li>
+          <li><a href="#remove-data" class="sidebar-link nested">Remove Data</a></li>
+          <li><a href="#realtime-listeners" class="sidebar-link">Real-time Listeners</a></li>
+          <li><a href="#server-values" class="sidebar-link">Server Values</a></li>
+          <li><a href="#transactions" class="sidebar-link">Transactions</a></li>
+          <li><a href="#presence-detection" class="sidebar-link">Presence Detection</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Documentation</h4>
+        <ul class="sidebar-nav">
+          <li><a href="getting-started.html" class="sidebar-link">Getting Started</a></li>
+          <li><a href="authentication.html" class="sidebar-link">Authentication</a></li>
+          <li><a href="firestore.html" class="sidebar-link">Cloud Firestore</a></li>
+          <li><a href="storage.html" class="sidebar-link">Cloud Storage</a></li>
+          <li><a href="realtime-database.html" class="sidebar-link active">Realtime Database</a></li>
+          <li><a href="ai-logic.html" class="sidebar-link">AI Logic</a></li>
+          <li><a href="app-check.html" class="sidebar-link">App Check</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Realtime Database</h1>
+        <p>Real-time synchronization, presence detection, and offline support for your Blazor WebAssembly applications.</p>
+      </div>
+
+      <!-- Overview -->
+      <section id="overview">
+        <h2>Overview</h2>
+        <p>Firebase Realtime Database is a cloud-hosted NoSQL database that lets you store and sync data between your users in real-time. FireBlazor provides a type-safe, intuitive API for working with Realtime Database in your Blazor WebAssembly applications.</p>
+
+        <p><strong>Key features include:</strong></p>
+        <ul>
+          <li><strong>Real-time synchronization</strong> - Data is synced across all clients in milliseconds</li>
+          <li><strong>Presence detection</strong> - Track user online/offline status</li>
+          <li><strong>Offline support</strong> - Data is persisted locally and synced when connectivity is restored</li>
+          <li><strong>Server values</strong> - Timestamps and atomic increments handled server-side</li>
+          <li><strong>Transactions</strong> - Atomic read-modify-write operations</li>
+        </ul>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Offline Support
+          </div>
+          <p>Firebase Realtime Database automatically caches data locally and handles reconnection seamlessly. Your app will continue to work offline, and changes will be synced when connectivity is restored. This is handled automatically - no additional configuration required.</p>
+        </div>
+      </section>
+
+      <!-- Basic Operations -->
+      <section id="basic-operations">
+        <h2>Basic Operations</h2>
+        <p>FireBlazor provides a clean, fluent API for all standard Realtime Database operations. All operations return a <code>Result&lt;T&gt;</code> type for functional error handling.</p>
+
+        <!-- Set Data -->
+        <h3 id="set-data">Set Data</h3>
+        <p>Use <code>SetAsync</code> to write or replace data at a specific location. This will overwrite any existing data at that path.</p>
+
+        <pre><code><span class="comment">// Set data at a specific path</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1"</span>).SetAsync(userData);
+
+<span class="comment">// Example with a user object</span>
+<span class="keyword">var</span> user = <span class="keyword">new</span> <span class="type">User</span>
+{
+    Name = <span class="string">"John Doe"</span>,
+    Email = <span class="string">"john@example.com"</span>,
+    CreatedAt = DateTime.UtcNow
+};
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user123"</span>).SetAsync(user);</code></pre>
+
+        <!-- Push Data -->
+        <h3 id="push-data">Push Data</h3>
+        <p>Use <code>PushAsync</code> to add data with an auto-generated unique key. This is ideal for lists where you want Firebase to manage unique identifiers.</p>
+
+        <pre><code><span class="comment">// Push data with auto-generated key</span>
+<span class="keyword">var</span> pushResult = <span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"messages"</span>).PushAsync(message);
+
+<span class="comment">// Get the generated key</span>
+<span class="keyword">if</span> (pushResult.IsSuccess)
+{
+    <span class="keyword">var</span> newKey = pushResult.Value; <span class="comment">// e.g., "-NxYz123abc"</span>
+    Console.WriteLine(<span class="string">$"Created message with key: </span>{newKey}<span class="string">"</span>);
+}</code></pre>
+
+        <!-- Get Data -->
+        <h3 id="get-data">Get Data</h3>
+        <p>Use <code>GetAsync&lt;T&gt;</code> to read data from a specific location. The data is automatically deserialized to your specified type.</p>
+
+        <pre><code><span class="comment">// Get data with type-safe deserialization</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1"</span>).GetAsync&lt;<span class="type">User</span>&gt;();
+
+<span class="keyword">if</span> (result.IsSuccess && result.Value != <span class="keyword">null</span>)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.WriteLine(<span class="string">$"Welcome, </span>{user.Name}<span class="string">!"</span>);
+}</code></pre>
+
+        <!-- Update Data -->
+        <h3 id="update-data">Update Data</h3>
+        <p>Use <code>UpdateAsync</code> to update specific fields without overwriting the entire object. Only the specified fields are modified.</p>
+
+        <pre><code><span class="comment">// Update specific fields</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1"</span>).UpdateAsync(<span class="keyword">new</span> { Status = <span class="string">"online"</span> });
+
+<span class="comment">// Update multiple fields at once</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1"</span>).UpdateAsync(<span class="keyword">new</span>
+{
+    Status = <span class="string">"online"</span>,
+    LastActive = DateTime.UtcNow,
+    LoginCount = <span class="number">5</span>
+});</code></pre>
+
+        <!-- Remove Data -->
+        <h3 id="remove-data">Remove Data</h3>
+        <p>Use <code>RemoveAsync</code> to delete data at a specific location. This removes the node and all its children.</p>
+
+        <pre><code><span class="comment">// Remove data at a path</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1"</span>).RemoveAsync();
+
+<span class="comment">// Remove with result handling</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"messages/oldMessage"</span>).RemoveAsync();
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    Console.WriteLine(<span class="string">"Message deleted successfully"</span>);
+}</code></pre>
+      </section>
+
+      <!-- Real-time Listeners -->
+      <section id="realtime-listeners">
+        <h2>Real-time Listeners</h2>
+        <p>One of the most powerful features of Realtime Database is the ability to listen for data changes in real-time. Use <code>OnValue</code> to subscribe to changes at a specific location.</p>
+
+        <pre><code><span class="comment">// Subscribe to real-time updates with query options</span>
+<span class="keyword">var</span> unsubscribe = Firebase.RealtimeDb
+    .Ref(<span class="string">"messages"</span>)
+    .OrderByChild(<span class="string">"timestamp"</span>)
+    .LimitToLast(<span class="number">50</span>)
+    .OnValue&lt;<span class="type">Dictionary</span>&lt;<span class="type">string</span>, <span class="type">Message</span>&gt;&gt;(
+        snapshot =&gt; {
+            <span class="keyword">if</span> (snapshot.Exists)
+                _messages = snapshot.Value.Values.ToList();
+            InvokeAsync(StateHasChanged);
+        },
+        error =&gt; Console.WriteLine(error.Message));
+
+<span class="comment">// Later, when component is disposed:</span>
+unsubscribe();</code></pre>
+
+        <p><strong>Available query methods:</strong></p>
+        <ul>
+          <li><code>OrderByChild(string childKey)</code> - Order results by a child key</li>
+          <li><code>OrderByKey()</code> - Order results by key</li>
+          <li><code>OrderByValue()</code> - Order results by value</li>
+          <li><code>LimitToFirst(int limit)</code> - Limit to the first N results</li>
+          <li><code>LimitToLast(int limit)</code> - Limit to the last N results</li>
+          <li><code>StartAt(object value)</code> - Start at a specific value</li>
+          <li><code>EndAt(object value)</code> - End at a specific value</li>
+          <li><code>EqualTo(object value)</code> - Filter to a specific value</li>
+        </ul>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Automatic Cleanup
+          </div>
+          <p>Always store the unsubscribe function and call it when your component is disposed to prevent memory leaks. Consider using <code>FirebaseComponentBase</code> which handles this automatically with the <code>Subscribe()</code> method.</p>
+        </div>
+      </section>
+
+      <!-- Server Values -->
+      <section id="server-values">
+        <h2>Server Values</h2>
+        <p>Server values are placeholders that are resolved on the Firebase server. This ensures consistency across clients and eliminates issues with client clock differences.</p>
+
+        <h3>ServerValue.Timestamp</h3>
+        <p>Use <code>ServerValue.Timestamp</code> to set a field to the server's current timestamp. This is more reliable than using client-side timestamps.</p>
+
+        <pre><code><span class="comment">// Set server timestamp</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"posts/post1"</span>).UpdateAsync(<span class="keyword">new</span> {
+    CreatedAt = <span class="type">ServerValue</span>.Timestamp
+});
+
+<span class="comment">// Use in a new object</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"events"</span>).PushAsync(<span class="keyword">new</span>
+{
+    Type = <span class="string">"user_login"</span>,
+    UserId = currentUserId,
+    Timestamp = <span class="type">ServerValue</span>.Timestamp
+});</code></pre>
+
+        <h3>ServerValue.Increment</h3>
+        <p>Use <code>ServerValue.Increment</code> for atomic counter operations. This ensures accurate counting even with concurrent updates.</p>
+
+        <pre><code><span class="comment">// Atomic increment</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"counters/visits"</span>).SetAsync(<span class="type">ServerValue</span>.Increment(<span class="number">1</span>));
+
+<span class="comment">// Decrement by using negative value</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"inventory/item1/stock"</span>).SetAsync(<span class="type">ServerValue</span>.Increment(<span class="number">-1</span>));
+
+<span class="comment">// Increment by any amount</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">"users/user1/points"</span>).SetAsync(<span class="type">ServerValue</span>.Increment(<span class="number">100</span>));</code></pre>
+      </section>
+
+      <!-- Transactions -->
+      <section id="transactions">
+        <h2>Transactions</h2>
+        <p>Transactions allow you to perform atomic read-modify-write operations. This is essential when you need to update data based on its current value, especially with concurrent users.</p>
+
+        <pre><code><span class="comment">// Transaction for atomic updates</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.RealtimeDb
+    .Ref(<span class="string">"likes/post1"</span>)
+    .TransactionAsync&lt;<span class="type">int</span>&gt;(current =&gt; (current ?? <span class="number">0</span>) + <span class="number">1</span>);
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    Console.WriteLine(<span class="string">$"New like count: </span>{result.Value}<span class="string">"</span>);
+}</code></pre>
+
+        <p>Transactions are ideal for:</p>
+        <ul>
+          <li>Incrementing/decrementing counters</li>
+          <li>Toggling boolean values</li>
+          <li>Appending to arrays</li>
+          <li>Any update that depends on the current value</li>
+        </ul>
+
+        <pre><code><span class="comment">// More complex transaction example</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.RealtimeDb
+    .Ref(<span class="string">"games/game1/players"</span>)
+    .TransactionAsync&lt;<span class="type">List</span>&lt;<span class="type">string</span>&gt;&gt;(currentPlayers =&gt;
+    {
+        <span class="keyword">var</span> players = currentPlayers ?? <span class="keyword">new</span> <span class="type">List</span>&lt;<span class="type">string</span>&gt;();
+        <span class="keyword">if</span> (!players.Contains(currentUserId))
+        {
+            players.Add(currentUserId);
+        }
+        <span class="keyword">return</span> players;
+    });</code></pre>
+      </section>
+
+      <!-- Presence Detection -->
+      <section id="presence-detection">
+        <h2>Presence Detection</h2>
+        <p>Presence detection allows you to track when users are online or offline. This is built on Firebase's <code>OnDisconnect</code> feature, which executes operations when a client disconnects.</p>
+
+        <h3>Setting Online Status</h3>
+        <p>Mark a user as online when they connect to your application.</p>
+
+        <pre><code><span class="comment">// Set online status</span>
+<span class="keyword">await</span> Firebase.RealtimeDb.Ref(<span class="string">$"presence/</span>{userId}<span class="string">"</span>).SetAsync(<span class="keyword">new</span> { Status = <span class="string">"online"</span> });</code></pre>
+
+        <h3>OnDisconnect for Offline Status</h3>
+        <p>Use <code>OnDisconnect</code> to automatically update the user's status when they disconnect (close the browser, lose connection, etc.).</p>
+
+        <pre><code><span class="comment">// Set offline status on disconnect</span>
+<span class="keyword">await</span> Firebase.RealtimeDb
+    .Ref(<span class="string">$"presence/</span>{userId}<span class="string">"</span>)
+    .OnDisconnect()
+    .SetAsync(<span class="keyword">new</span> { Status = <span class="string">"offline"</span>, LastSeen = <span class="type">ServerValue</span>.Timestamp });</code></pre>
+
+        <p><strong>Complete presence system example:</strong></p>
+
+        <pre><code><span class="comment">// Full presence detection setup</span>
+<span class="keyword">public</span> <span class="keyword">async</span> <span class="type">Task</span> SetupPresence(<span class="type">string</span> userId)
+{
+    <span class="keyword">var</span> presenceRef = Firebase.RealtimeDb.Ref(<span class="string">$"presence/</span>{userId}<span class="string">"</span>);
+
+    <span class="comment">// Set online status</span>
+    <span class="keyword">await</span> presenceRef.SetAsync(<span class="keyword">new</span>
+    {
+        Status = <span class="string">"online"</span>,
+        LastSeen = <span class="type">ServerValue</span>.Timestamp
+    });
+
+    <span class="comment">// Configure offline status for when user disconnects</span>
+    <span class="keyword">await</span> presenceRef
+        .OnDisconnect()
+        .SetAsync(<span class="keyword">new</span>
+        {
+            Status = <span class="string">"offline"</span>,
+            LastSeen = <span class="type">ServerValue</span>.Timestamp
+        });
+}</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Automatic Reconnection
+          </div>
+          <p>Firebase automatically handles reconnection when a user's connection is temporarily lost. The <code>OnDisconnect</code> operations are only executed when the connection is truly terminated, not during brief network interruptions.</p>
+        </div>
+      </section>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <a href="storage.html" class="page-nav-link prev">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">Cloud Storage</span>
+        </a>
+        <a href="ai-logic.html" class="page-nav-link next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">AI Logic</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span class="logo-icon">F</span>
+        <span>FireBlazor</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/issues" class="footer-link" target="_blank">Issues</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/discussions" class="footer-link" target="_blank">Discussions</a>
+      </div>
+      <p class="footer-copyright">MIT License. Built for Blazor developers.</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+</body>
+</html>

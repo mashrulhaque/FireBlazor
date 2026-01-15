@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Firebase AI Logic (Gemini) documentation for FireBlazor - Text generation, streaming, function calling, and more">
+  <title>Firebase AI Logic (Gemini) - FireBlazor Documentation</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">&#x1F525;</span>
+        <span>FireBlazor</span>
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger active">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Cloud Firestore</a>
+            <a href="storage.html" class="dropdown-item">Cloud Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item active">AI Logic (Gemini)</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="nav-link" target="_blank">NuGet</a>
+      </nav>
+
+      <button class="mobile-menu-btn sidebar-toggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">AI Logic (Gemini)</h4>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+          <li><a href="#text-generation" class="sidebar-link">Text Generation</a></li>
+          <li><a href="#generation-config" class="sidebar-link nested">Generation Config</a></li>
+          <li><a href="#streaming-responses" class="sidebar-link">Streaming Responses</a></li>
+          <li><a href="#multi-turn-chat" class="sidebar-link">Multi-turn Chat</a></li>
+          <li><a href="#multimodal-input" class="sidebar-link">Multimodal Input</a></li>
+          <li><a href="#function-calling" class="sidebar-link">Function Calling</a></li>
+          <li><a href="#grounding" class="sidebar-link">Grounding with Google Search</a></li>
+          <li><a href="#image-generation" class="sidebar-link">Image Generation</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Related</h4>
+        <ul class="sidebar-nav">
+          <li><a href="getting-started.html" class="sidebar-link">Getting Started</a></li>
+          <li><a href="app-check.html" class="sidebar-link">App Check</a></li>
+          <li><a href="error-handling.html" class="sidebar-link">Error Handling</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Firebase AI Logic (Gemini)</h1>
+        <p>Integrate Google's Gemini AI models into your Blazor application with streaming support, function calling, grounding, and multimodal capabilities.</p>
+      </div>
+
+      <!-- Overview Section -->
+      <section id="overview">
+        <h2>Overview</h2>
+        <p>Firebase AI Logic provides seamless integration with Google's Gemini AI models directly from your Blazor WebAssembly application. FireBlazor wraps the Firebase AI SDK to give you a native C# experience with full type safety.</p>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Model Availability
+          </div>
+          <p>The recommended model for most use cases is <code>gemini-2.5-flash</code>. This model provides an excellent balance of speed, quality, and cost. For more complex reasoning tasks, consider <code>gemini-2.5-pro</code>. Check the <a href="https://firebase.google.com/docs/vertex-ai/gemini-models" target="_blank">Firebase AI documentation</a> for the latest available models.</p>
+        </div>
+
+        <p><strong>Key features include:</strong></p>
+        <ul>
+          <li><strong>Text Generation</strong> - Generate text responses from prompts</li>
+          <li><strong>Streaming</strong> - Receive responses in real-time as they're generated</li>
+          <li><strong>Multi-turn Chat</strong> - Maintain conversation context across multiple messages</li>
+          <li><strong>Multimodal Input</strong> - Send text and images together</li>
+          <li><strong>Function Calling</strong> - Let the model call your defined functions</li>
+          <li><strong>Grounding</strong> - Ground responses with Google Search results</li>
+          <li><strong>Image Generation</strong> - Generate images using Imagen models</li>
+        </ul>
+      </section>
+
+      <!-- Text Generation Section -->
+      <section id="text-generation">
+        <h2>Text Generation</h2>
+        <p>Generate text responses from prompts using Gemini models. First, get a model instance with optional configuration, then call <code>GenerateContentAsync</code>.</p>
+
+        <h3 id="generation-config">Generation Config</h3>
+        <p>Configure the model behavior using <code>GenerationConfig</code>. You can set system instructions, temperature, output token limits, and more.</p>
+
+        <pre><code><span class="keyword">var</span> model = Firebase.AI.GetModel(<span class="string">"gemini-2.5-flash"</span>, <span class="keyword">new</span> <span class="type">GenerationConfig</span>
+{
+    SystemInstruction = <span class="string">"You are a helpful assistant."</span>,
+    Temperature = <span class="number">0.7f</span>,
+    MaxOutputTokens = <span class="number">1024</span>
+});
+
+<span class="keyword">var</span> result = <span class="keyword">await</span> model.GenerateContentAsync(<span class="string">"Explain quantum computing in simple terms."</span>);
+Console.WriteLine(result.Value.Text);</code></pre>
+
+        <p><strong>GenerationConfig Properties:</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>SystemInstruction</code></td>
+              <td>string</td>
+              <td>Instructions that define the model's behavior and persona</td>
+            </tr>
+            <tr>
+              <td><code>Temperature</code></td>
+              <td>float</td>
+              <td>Controls randomness (0.0 = deterministic, 1.0 = creative)</td>
+            </tr>
+            <tr>
+              <td><code>MaxOutputTokens</code></td>
+              <td>int</td>
+              <td>Maximum number of tokens in the response</td>
+            </tr>
+            <tr>
+              <td><code>TopP</code></td>
+              <td>float</td>
+              <td>Nucleus sampling parameter</td>
+            </tr>
+            <tr>
+              <td><code>TopK</code></td>
+              <td>int</td>
+              <td>Top-k sampling parameter</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Streaming Responses Section -->
+      <section id="streaming-responses">
+        <h2>Streaming Responses</h2>
+        <p>For a better user experience, stream responses as they're generated using <code>GenerateContentStreamAsync</code>. This allows you to display text progressively rather than waiting for the complete response.</p>
+
+        <pre><code><span class="keyword">await foreach</span> (<span class="keyword">var</span> chunk <span class="keyword">in</span> model.GenerateContentStreamAsync(<span class="string">"Write a story about a robot."</span>))
+{
+    <span class="keyword">if</span> (chunk.IsSuccess && !chunk.Value.IsFinal)
+    {
+        _response += chunk.Value.Text;
+        StateHasChanged();
+    }
+}</code></pre>
+
+        <p>The <code>await foreach</code> pattern provides a natural way to process streaming data in C#. Each chunk contains a portion of the response, and you can update your UI progressively.</p>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Performance Tip
+          </div>
+          <p>When using streaming in Blazor, consider using <code>StateHasChanged()</code> with debouncing or batching to avoid excessive re-renders. You can also use <code>InvokeAsync(StateHasChanged)</code> when updating from async contexts.</p>
+        </div>
+      </section>
+
+      <!-- Multi-turn Chat Section -->
+      <section id="multi-turn-chat">
+        <h2>Multi-turn Chat</h2>
+        <p>For conversational applications, use the chat interface to maintain context across multiple messages. The chat automatically manages conversation history.</p>
+
+        <pre><code><span class="keyword">var</span> chat = model.StartChat(<span class="keyword">new</span> <span class="type">ChatOptions</span>
+{
+    History = previousMessages
+});
+
+<span class="comment">// Send a message and get a response</span>
+<span class="keyword">var</span> response = <span class="keyword">await</span> chat.SendMessageAsync(<span class="string">"What's the weather like?"</span>);
+
+<span class="comment">// Streaming chat response</span>
+<span class="keyword">await foreach</span> (<span class="keyword">var</span> chunk <span class="keyword">in</span> chat.SendMessageStreamAsync(<span class="string">"Tell me more."</span>))
+{
+    _response += chunk.Value.Text;
+    StateHasChanged();
+}</code></pre>
+
+        <p><strong>ChatOptions Properties:</strong></p>
+        <ul>
+          <li><code>History</code> - Pre-populate the chat with previous messages for context</li>
+        </ul>
+
+        <p>The chat maintains state between messages, so follow-up questions like "Tell me more" will have full context of the conversation.</p>
+      </section>
+
+      <!-- Multimodal Input Section -->
+      <section id="multimodal-input">
+        <h2>Multimodal Input</h2>
+        <p>Gemini models support multimodal input, allowing you to send both text and images in the same request. Use <code>ContentPart</code> to construct multimodal prompts.</p>
+
+        <pre><code><span class="keyword">var</span> parts = <span class="keyword">new</span> <span class="type">List</span>&lt;<span class="type">ContentPart</span>&gt;
+{
+    ContentPart.Text(<span class="string">"What's in this image?"</span>),
+    ContentPart.Image(imageBytes, <span class="string">"image/png"</span>)
+};
+
+<span class="keyword">var</span> result = <span class="keyword">await</span> model.GenerateContentAsync(parts);</code></pre>
+
+        <p><strong>ContentPart Factory Methods:</strong></p>
+        <ul>
+          <li><code>ContentPart.Text(string text)</code> - Create a text content part</li>
+          <li><code>ContentPart.Image(byte[] bytes, string mimeType)</code> - Create an image content part from bytes</li>
+        </ul>
+
+        <p>Supported image formats include PNG, JPEG, WebP, and GIF. The image bytes can come from file uploads, canvas captures, or any other source.</p>
+      </section>
+
+      <!-- Function Calling Section -->
+      <section id="function-calling">
+        <h2>Function Calling</h2>
+        <p>Function calling allows the model to request execution of functions you define. This enables the model to interact with external systems, APIs, or perform calculations.</p>
+
+        <pre><code><span class="keyword">var</span> config = <span class="keyword">new</span> <span class="type">GenerationConfig</span>
+{
+    Tools = <span class="keyword">new</span>[]
+    {
+        <span class="keyword">new</span> <span class="type">FunctionDeclaration</span>
+        {
+            Name = <span class="string">"get_weather"</span>,
+            Description = <span class="string">"Get weather for a location"</span>,
+            Parameters = <span class="keyword">new</span> { location = <span class="string">"string"</span> }
+        }
+    }
+};
+
+<span class="keyword">var</span> model = Firebase.AI.GetModel(<span class="string">"gemini-2.5-flash"</span>, config);
+<span class="keyword">var</span> result = <span class="keyword">await</span> model.GenerateContentAsync(<span class="string">"What's the weather in Tokyo?"</span>);
+
+<span class="keyword">if</span> (result.Value.HasFunctionCalls)
+{
+    <span class="keyword">foreach</span> (<span class="keyword">var</span> call <span class="keyword">in</span> result.Value.FunctionCalls)
+    {
+        <span class="comment">// Handle function call</span>
+        <span class="comment">// call.Name - The function name (e.g., "get_weather")</span>
+        <span class="comment">// call.Arguments - The arguments passed by the model</span>
+    }
+}</code></pre>
+
+        <p><strong>FunctionDeclaration Properties:</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Name</code></td>
+              <td>string</td>
+              <td>Unique identifier for the function</td>
+            </tr>
+            <tr>
+              <td><code>Description</code></td>
+              <td>string</td>
+              <td>Description of what the function does (helps the model decide when to call it)</td>
+            </tr>
+            <tr>
+              <td><code>Parameters</code></td>
+              <td>object</td>
+              <td>JSON Schema describing the function parameters</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>After receiving function calls, execute the corresponding logic and send the results back to the model for a complete response.</p>
+      </section>
+
+      <!-- Grounding with Google Search Section -->
+      <section id="grounding">
+        <h2>Grounding with Google Search</h2>
+        <p>Ground model responses with real-time information from Google Search. This is useful for questions about current events, recent data, or factual information that may be beyond the model's training data.</p>
+
+        <pre><code><span class="keyword">var</span> config = <span class="keyword">new</span> <span class="type">GenerationConfig</span>
+{
+    Grounding = <span class="type">GroundingConfig</span>.WithGoogleSearch()
+};
+
+<span class="keyword">var</span> model = Firebase.AI.GetModel(<span class="string">"gemini-2.5-flash"</span>, config);
+<span class="keyword">var</span> result = <span class="keyword">await</span> model.GenerateContentAsync(<span class="string">"What are the latest news about AI?"</span>);
+
+<span class="keyword">if</span> (result.Value.IsGrounded)
+{
+    <span class="comment">// Response includes web search results</span>
+    Console.WriteLine(result.Value.Text);
+}</code></pre>
+
+        <p>When grounding is enabled, the model will search the web for relevant information and incorporate it into the response. The <code>IsGrounded</code> property indicates whether the response was successfully grounded with search results.</p>
+      </section>
+
+      <!-- Image Generation Section -->
+      <section id="image-generation">
+        <h2>Image Generation</h2>
+        <p>Generate images using Google's Imagen models. Image generation uses a separate model endpoint from text generation.</p>
+
+        <pre><code><span class="keyword">var</span> imageModel = Firebase.AI.GetImageModel(<span class="string">"imagen-4.0-generate-001"</span>);
+<span class="keyword">var</span> result = <span class="keyword">await</span> imageModel.GenerateImagesAsync(
+    <span class="string">"A serene mountain landscape at sunset"</span>,
+    <span class="keyword">new</span> <span class="type">ImageGenerationConfig</span> { NumberOfImages = <span class="number">1</span> });</code></pre>
+
+        <p><strong>ImageGenerationConfig Properties:</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>NumberOfImages</code></td>
+              <td>int</td>
+              <td>Number of images to generate (1-4)</td>
+            </tr>
+            <tr>
+              <td><code>AspectRatio</code></td>
+              <td>string</td>
+              <td>Aspect ratio of generated images (e.g., "16:9", "1:1")</td>
+            </tr>
+            <tr>
+              <td><code>NegativePrompt</code></td>
+              <td>string</td>
+              <td>Elements to exclude from the generated image</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Image Model Availability
+          </div>
+          <p>Image generation models like <code>imagen-4.0-generate-001</code> may require additional setup in your Firebase project. Check your Firebase console and ensure the appropriate APIs are enabled.</p>
+        </div>
+      </section>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <a href="realtime-database.html" class="page-nav-link">
+          <span class="page-nav-label">&larr; Previous</span>
+          <span class="page-nav-title">Realtime Database</span>
+        </a>
+        <a href="app-check.html" class="page-nav-link next">
+          <span class="page-nav-label">Next &rarr;</span>
+          <span class="page-nav-title">App Check</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>&#x1F525;</span>
+        <span>FireBlazor</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/issues" class="footer-link" target="_blank">Issues</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/discussions" class="footer-link" target="_blank">Discussions</a>
+      </div>
+      <div class="footer-copyright">
+        &copy; 2024 FireBlazor. MIT License.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

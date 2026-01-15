@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Storage - FireBlazor Documentation</title>
+  <meta name="description" content="Learn how to use Cloud Storage with FireBlazor for file upload/download with progress tracking and metadata management.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">&#128293;</span>
+        <span>FireBlazor</span>
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger active">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Cloud Firestore</a>
+            <a href="storage.html" class="dropdown-item active">Cloud Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">Firebase AI Logic</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+      </nav>
+
+      <button class="mobile-menu-btn sidebar-toggle" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay"></div>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Cloud Storage</h3>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Upload Files</h3>
+        <ul class="sidebar-nav">
+          <li><a href="#upload-files" class="sidebar-link">Upload Files</a></li>
+          <li><a href="#upload-with-progress" class="sidebar-link nested">Upload with Progress</a></li>
+          <li><a href="#upload-string-content" class="sidebar-link nested">Upload String Content</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Download Files</h3>
+        <ul class="sidebar-nav">
+          <li><a href="#download-files" class="sidebar-link">Download Files</a></li>
+          <li><a href="#get-download-url" class="sidebar-link nested">Get Download URL</a></li>
+          <li><a href="#download-bytes-stream" class="sidebar-link nested">Download as Bytes/Stream</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Manage Files</h3>
+        <ul class="sidebar-nav">
+          <li><a href="#manage-files" class="sidebar-link">Manage Files</a></li>
+          <li><a href="#get-metadata" class="sidebar-link nested">Get Metadata</a></li>
+          <li><a href="#update-metadata" class="sidebar-link nested">Update Metadata</a></li>
+          <li><a href="#delete-files" class="sidebar-link nested">Delete Files</a></li>
+          <li><a href="#list-files" class="sidebar-link nested">List Files</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Cloud Storage</h1>
+        <p>File upload and download with progress tracking, metadata management, and seamless Blazor integration.</p>
+      </div>
+
+      <!-- Overview -->
+      <section id="overview">
+        <h2>Overview</h2>
+        <p>FireBlazor provides a comprehensive API for working with Firebase Cloud Storage in your Blazor WebAssembly applications. Features include:</p>
+        <ul>
+          <li><strong>File Upload</strong> - Upload files with real-time progress tracking</li>
+          <li><strong>File Download</strong> - Download files as URLs, bytes, or streams</li>
+          <li><strong>Metadata Management</strong> - Get and update file metadata including custom properties</li>
+          <li><strong>File Operations</strong> - Delete files and list directory contents</li>
+        </ul>
+
+        <p>All operations use the <code>Result&lt;T&gt;</code> pattern for type-safe error handling.</p>
+      </section>
+
+      <!-- Upload Files -->
+      <section id="upload-files">
+        <h2>Upload Files</h2>
+        <p>Upload files to Cloud Storage using the <code>PutAsync</code> method. This method supports Blazor's <code>IBrowserFile</code> interface for seamless integration with file input components.</p>
+
+        <h3 id="upload-with-progress">Upload with Progress Tracking</h3>
+        <p>Track upload progress in real-time using the progress callback parameter. This is ideal for providing user feedback during large file uploads.</p>
+
+        <pre><code><span class="comment">// Upload with progress tracking</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">$"uploads/{Guid.NewGuid()}/{file.Name}"</span>)
+    .PutAsync(
+        browserFile,
+        <span class="keyword">new</span> <span class="type">StorageMetadata</span> { ContentType = file.ContentType },
+        progress => {
+            _uploadProgress = progress.Percentage;
+            InvokeAsync(StateHasChanged);
+        });</code></pre>
+
+        <p>The progress callback receives a <code>UploadProgress</code> object with the following properties:</p>
+        <ul>
+          <li><code>Percentage</code> - Upload progress as a value from 0 to 100</li>
+          <li><code>BytesTransferred</code> - Number of bytes uploaded so far</li>
+          <li><code>TotalBytes</code> - Total file size in bytes</li>
+        </ul>
+
+        <h4>Complete Upload Example with UI</h4>
+        <pre><code><span class="keyword">@inject</span> IFirebase Firebase
+
+<span class="operator">&lt;</span>InputFile OnChange=<span class="string">"HandleFileSelected"</span> <span class="operator">/&gt;</span>
+
+<span class="keyword">@if</span> (_isUploading)
+{
+    <span class="operator">&lt;</span>div class=<span class="string">"progress-bar"</span><span class="operator">&gt;</span>
+        <span class="operator">&lt;</span>div style=<span class="string">"width: @(_uploadProgress)%"</span><span class="operator">&gt;&lt;/</span>div<span class="operator">&gt;</span>
+    <span class="operator">&lt;/</span>div<span class="operator">&gt;</span>
+    <span class="operator">&lt;</span>span<span class="operator">&gt;</span>@_uploadProgress.ToString(<span class="string">"F0"</span>)%<span class="operator">&lt;/</span>span<span class="operator">&gt;</span>
+}
+
+<span class="keyword">@code</span> {
+    <span class="keyword">private</span> <span class="type">double</span> _uploadProgress;
+    <span class="keyword">private</span> <span class="type">bool</span> _isUploading;
+
+    <span class="keyword">private</span> <span class="keyword">async</span> <span class="type">Task</span> HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        <span class="keyword">var</span> file = e.File;
+        _isUploading = <span class="keyword">true</span>;
+
+        <span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Storage
+            .Ref(<span class="string">$"uploads/{Guid.NewGuid()}/{file.Name}"</span>)
+            .PutAsync(
+                file,
+                <span class="keyword">new</span> <span class="type">StorageMetadata</span> { ContentType = file.ContentType },
+                progress => {
+                    _uploadProgress = progress.Percentage;
+                    InvokeAsync(StateHasChanged);
+                });
+
+        _isUploading = <span class="keyword">false</span>;
+
+        <span class="keyword">if</span> (result.IsSuccess)
+        {
+            Console.WriteLine(<span class="string">$"File uploaded to: {result.Value.Ref.FullPath}"</span>);
+        }
+    }
+}</code></pre>
+      </section>
+
+      <!-- Upload String Content -->
+      <section id="upload-string-content">
+        <h3>Upload String Content</h3>
+        <p>Upload text content directly using <code>PutStringAsync</code>. This is useful for uploading JSON configurations, text files, or other string-based content.</p>
+
+        <pre><code><span class="comment">// Upload string content</span>
+<span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"data/config.json"</span>)
+    .PutStringAsync(
+        jsonContent,
+        <span class="type">StringFormat</span>.Raw,
+        <span class="keyword">new</span> <span class="type">StorageMetadata</span> { ContentType = <span class="string">"application/json"</span> });</code></pre>
+
+        <p>The <code>StringFormat</code> enum supports the following values:</p>
+        <ul>
+          <li><code>Raw</code> - Plain text content</li>
+          <li><code>Base64</code> - Base64 encoded content</li>
+          <li><code>Base64Url</code> - URL-safe Base64 encoded content</li>
+          <li><code>DataUrl</code> - Data URL format (e.g., <code>data:text/plain;base64,...</code>)</li>
+        </ul>
+      </section>
+
+      <!-- Download Files -->
+      <section id="download-files">
+        <h2>Download Files</h2>
+        <p>FireBlazor provides multiple ways to download files from Cloud Storage depending on your use case.</p>
+
+        <h3 id="get-download-url">Get Download URL</h3>
+        <p>Get a publicly accessible download URL for a file. This URL can be used directly in <code>&lt;img&gt;</code> tags or for client-side downloads.</p>
+
+        <pre><code><span class="comment">// Get download URL</span>
+<span class="keyword">var</span> urlResult = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file.png"</span>)
+    .GetDownloadUrlAsync();
+
+<span class="keyword">if</span> (urlResult.IsSuccess)
+{
+    <span class="keyword">var</span> downloadUrl = urlResult.Value;
+    <span class="comment">// Use the URL in an img tag or for download</span>
+}</code></pre>
+
+        <h3 id="download-bytes-stream">Download as Bytes or Stream</h3>
+        <p>Download file contents directly as a byte array or stream for in-memory processing.</p>
+
+        <h4>Download as Bytes</h4>
+        <pre><code><span class="comment">// Download as bytes</span>
+<span class="keyword">var</span> bytesResult = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file.png"</span>)
+    .GetBytesAsync(maxSize: <span class="number">10_000_000</span>);</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Important: maxSize Limit
+          </div>
+          <p>The <code>maxSize</code> parameter is required and specifies the maximum file size in bytes that can be downloaded. If the file exceeds this size, the operation will fail. This prevents accidental memory issues when downloading unexpectedly large files. Set this value appropriately based on your expected file sizes.</p>
+        </div>
+
+        <h4>Download as Stream</h4>
+        <pre><code><span class="comment">// Download as stream</span>
+<span class="keyword">var</span> streamResult = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file.png"</span>)
+    .GetStreamAsync();
+
+<span class="keyword">if</span> (streamResult.IsSuccess)
+{
+    <span class="keyword">using</span> <span class="keyword">var</span> stream = streamResult.Value;
+    <span class="comment">// Process the stream</span>
+}</code></pre>
+      </section>
+
+      <!-- Manage Files -->
+      <section id="manage-files">
+        <h2>Manage Files</h2>
+        <p>FireBlazor provides methods for managing file metadata, deleting files, and listing directory contents.</p>
+
+        <h3 id="get-metadata">Get Metadata</h3>
+        <p>Retrieve metadata for a file including size, content type, creation time, and custom metadata.</p>
+
+        <pre><code><span class="comment">// Get file metadata</span>
+<span class="keyword">var</span> metadata = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file"</span>)
+    .GetMetadataAsync();
+
+<span class="keyword">if</span> (metadata.IsSuccess)
+{
+    Console.WriteLine(<span class="string">$"Name: {metadata.Value.Name}"</span>);
+    Console.WriteLine(<span class="string">$"Size: {metadata.Value.Size} bytes"</span>);
+    Console.WriteLine(<span class="string">$"Content Type: {metadata.Value.ContentType}"</span>);
+    Console.WriteLine(<span class="string">$"Created: {metadata.Value.TimeCreated}"</span>);
+}</code></pre>
+
+        <h3 id="update-metadata">Update Metadata</h3>
+        <p>Update file metadata including cache control settings and custom metadata properties.</p>
+
+        <pre><code><span class="comment">// Update file metadata</span>
+<span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file"</span>)
+    .UpdateMetadataAsync(<span class="keyword">new</span> <span class="type">StorageMetadata</span>
+    {
+        CacheControl = <span class="string">"public, max-age=3600"</span>,
+        CustomMetadata = <span class="keyword">new</span> <span class="type">Dictionary</span>&lt;<span class="type">string</span>, <span class="type">string</span>&gt;
+        {
+            [<span class="string">"version"</span>] = <span class="string">"1.0"</span>,
+            [<span class="string">"author"</span>] = <span class="string">"FireBlazor"</span>
+        }
+    });</code></pre>
+
+        <p>Common metadata properties you can update:</p>
+        <ul>
+          <li><code>CacheControl</code> - HTTP cache control header</li>
+          <li><code>ContentDisposition</code> - Content disposition header</li>
+          <li><code>ContentEncoding</code> - Content encoding (e.g., gzip)</li>
+          <li><code>ContentLanguage</code> - Content language</li>
+          <li><code>ContentType</code> - MIME type of the file</li>
+          <li><code>CustomMetadata</code> - Dictionary of custom key-value pairs</li>
+        </ul>
+
+        <h3 id="delete-files">Delete Files</h3>
+        <p>Delete a file from Cloud Storage.</p>
+
+        <pre><code><span class="comment">// Delete a file</span>
+<span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"path/to/file"</span>)
+    .DeleteAsync();</code></pre>
+
+        <h3 id="list-files">List Files</h3>
+        <p>List all files and subdirectories in a storage location.</p>
+
+        <pre><code><span class="comment">// List all files in a directory</span>
+<span class="keyword">var</span> listResult = <span class="keyword">await</span> Firebase.Storage
+    .Ref(<span class="string">"uploads"</span>)
+    .ListAllAsync();
+
+<span class="keyword">if</span> (listResult.IsSuccess)
+{
+    <span class="comment">// Iterate over files</span>
+    <span class="keyword">foreach</span> (<span class="keyword">var</span> item <span class="keyword">in</span> listResult.Value.Items)
+    {
+        Console.WriteLine(<span class="string">$"File: {item.Name}"</span>);
+    }
+
+    <span class="comment">// Iterate over subdirectories</span>
+    <span class="keyword">foreach</span> (<span class="keyword">var</span> prefix <span class="keyword">in</span> listResult.Value.Prefixes)
+    {
+        Console.WriteLine(<span class="string">$"Directory: {prefix.Name}"</span>);
+    }
+}</code></pre>
+      </section>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <a href="firestore.html" class="page-nav-link prev">
+          <span class="page-nav-label">&larr; Previous</span>
+          <span class="page-nav-title">Cloud Firestore</span>
+        </a>
+        <a href="realtime-database.html" class="page-nav-link next">
+          <span class="page-nav-label">Next &rarr;</span>
+          <span class="page-nav-title">Realtime Database</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>&#128293;</span>
+        <span>FireBlazor</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/blob/main/LICENSE" class="footer-link" target="_blank">License</a>
+      </div>
+      <p class="footer-copyright">&copy; 2024 FireBlazor. MIT License.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

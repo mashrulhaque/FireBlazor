@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FireBlazor - Firebase for Blazor with zero boilerplate and delightful developer experience. Native C# SDK for .NET 8, 9, and 10.">
+  <meta name="keywords" content="FireBlazor, Blazor, Firebase, .NET, C#, Authentication, Firestore, Cloud Storage, Realtime Database">
+  <title>FireBlazor - Firebase for Blazor</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">🔥</span>
+        <span>FireBlazor</span>
+      </a>
+
+      <nav class="nav">
+        <a href="#quickstart" class="nav-link">Getting Started</a>
+
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Firestore</a>
+            <a href="storage.html" class="dropdown-item">Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">AI Logic</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank" rel="noopener noreferrer">
+          GitHub
+        </a>
+      </nav>
+
+      <button class="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span>.NET 8, 9, 10 Ready</span>
+      </div>
+
+      <h1 class="hero-title">Firebase for Blazor</h1>
+      <p class="hero-subtitle">Zero boilerplate, delightful DX</p>
+
+      <div class="hero-cta">
+        <a href="#quickstart" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="hero-code">
+        <div class="code-window">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">UserService.cs</span>
+          </div>
+          <div class="code-body">
+<pre><code><span class="comment">// Simple, type-safe Firebase operations</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> firestore
+    .<span class="method">Collection</span>(<span class="string">"users"</span>)
+    .<span class="method">WhereEqualTo</span>(<span class="string">"status"</span>, <span class="string">"active"</span>)
+    .<span class="method">OrderByDescending</span>(<span class="string">"createdAt"</span>)
+    .<span class="method">Limit</span>(<span class="number">10</span>)
+    .<span class="method">GetAsync</span>&lt;<span class="type">User</span>&gt;();
+
+<span class="keyword">if</span> (result.<span class="property">IsSuccess</span>)
+{
+    <span class="keyword">foreach</span> (<span class="keyword">var</span> user <span class="keyword">in</span> result.<span class="property">Value</span>)
+    {
+        Console.<span class="method">WriteLine</span>(user.<span class="property">Name</span>);
+    }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="section-header">
+      <p class="section-label">Features</p>
+      <h2 class="section-title">Everything you need to build with Firebase</h2>
+      <p class="section-description">Full Firebase SDK coverage with native C# types, IntelliSense support, and compile-time safety.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3 class="feature-title">Authentication</h3>
+        <p class="feature-description">Email/password, Google, GitHub, Microsoft OAuth with seamless Blazor authorization integration.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3 class="feature-title">Cloud Firestore</h3>
+        <p class="feature-description">LINQ-style queries, real-time subscriptions, transactions, and batch operations.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3 class="feature-title">Cloud Storage</h3>
+        <p class="feature-description">Upload with progress tracking, metadata management, and secure download URLs.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3 class="feature-title">Realtime Database</h3>
+        <p class="feature-description">Live sync, presence detection, offline support, and optimistic updates.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3 class="feature-title">AI Logic</h3>
+        <p class="feature-description">Gemini streaming, function calling, grounding, and multi-modal support.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3 class="feature-title">App Check</h3>
+        <p class="feature-description">reCAPTCHA v3/Enterprise protection to safeguard your backend resources.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Section -->
+  <section class="comparison" id="comparison">
+    <div class="comparison-container">
+      <div class="section-header">
+        <p class="section-label">Why FireBlazor?</p>
+        <h2 class="section-title">A better developer experience</h2>
+        <p class="section-description">See how FireBlazor compares to using the JavaScript SDK via interop.</p>
+      </div>
+
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>FireBlazor</th>
+            <th>JS SDK via Interop</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Native C# types</td>
+            <td>Manual JS interop</td>
+          </tr>
+          <tr>
+            <td>LINQ-style queries</td>
+            <td>String-based queries</td>
+          </tr>
+          <tr>
+            <td>Result&lt;T&gt; error handling</td>
+            <td>Try-catch exceptions</td>
+          </tr>
+          <tr>
+            <td>Blazor authorization integration</td>
+            <td>Manual auth state</td>
+          </tr>
+          <tr>
+            <td>IntelliSense & compile-time safety</td>
+            <td>Runtime errors</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Quick Start Section -->
+  <section class="quickstart" id="quickstart">
+    <div class="quickstart-container">
+      <div class="section-header">
+        <p class="section-label">Quick Start</p>
+        <h2 class="section-title">Get started in 3 steps</h2>
+        <p class="section-description">From zero to Firebase in under a minute.</p>
+      </div>
+
+      <div class="quickstart-steps">
+        <!-- Step 1: Install -->
+        <div class="quickstart-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install the package</h3>
+            <p>Add FireBlazor to your Blazor project via NuGet.</p>
+            <div class="code-window">
+              <div class="code-header">
+                <span class="code-dot red"></span>
+                <span class="code-dot yellow"></span>
+                <span class="code-dot green"></span>
+                <span class="code-title">Terminal</span>
+              </div>
+              <div class="code-body">
+<pre><code>dotnet add package FireBlazor</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Configure -->
+        <div class="quickstart-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Configure Firebase</h3>
+            <p>Add Firebase services to your application in Program.cs.</p>
+            <div class="code-window">
+              <div class="code-header">
+                <span class="code-dot red"></span>
+                <span class="code-dot yellow"></span>
+                <span class="code-dot green"></span>
+                <span class="code-title">Program.cs</span>
+              </div>
+              <div class="code-body">
+<pre><code><span class="keyword">using</span> FireBlazor;
+
+<span class="keyword">var</span> builder = WebAssemblyHostBuilder.<span class="method">CreateDefault</span>(args);
+
+builder.Services.<span class="method">AddFirebase</span>(options =>
+{
+    options.<span class="property">ApiKey</span> = <span class="string">"your-api-key"</span>;
+    options.<span class="property">AuthDomain</span> = <span class="string">"your-project.firebaseapp.com"</span>;
+    options.<span class="property">ProjectId</span> = <span class="string">"your-project-id"</span>;
+});
+
+<span class="keyword">await</span> builder.<span class="method">Build</span>().<span class="method">RunAsync</span>();</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Use -->
+        <div class="quickstart-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Start building</h3>
+            <p>Inject and use Firebase services in your components.</p>
+            <div class="code-window">
+              <div class="code-header">
+                <span class="code-dot red"></span>
+                <span class="code-dot yellow"></span>
+                <span class="code-dot green"></span>
+                <span class="code-title">MyComponent.razor</span>
+              </div>
+              <div class="code-body">
+<pre><code><span class="keyword">@inject</span> <span class="type">IFirebaseAuth</span> Auth
+<span class="keyword">@inject</span> <span class="type">IFirestore</span> Firestore
+
+<span class="keyword">@code</span> {
+    <span class="keyword">private async</span> Task <span class="method">SignIn</span>()
+    {
+        <span class="keyword">var</span> result = <span class="keyword">await</span> Auth.<span class="method">SignInWithEmailAsync</span>(
+            email, password);
+
+        <span class="keyword">if</span> (result.<span class="property">IsSuccess</span>)
+        {
+            <span class="comment">// User is signed in!</span>
+        }
+    }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>🔥</span>
+        <span>FireBlazor</span>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank" rel="noopener noreferrer">NuGet</a>
+      </div>
+
+      <p class="footer-copyright">MIT License</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

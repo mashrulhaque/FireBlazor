@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FireBlazor Authentication documentation - Email/Password, OAuth providers, and user management for Blazor WebAssembly">
+  <title>Authentication - FireBlazor Documentation</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">🔥</span>
+        FireBlazor
+      </a>
+
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger active">Docs</span>
+          <div class="dropdown-menu">
+            <a href="getting-started.html" class="dropdown-item">Getting Started</a>
+            <a href="authentication.html" class="dropdown-item active">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Firestore</a>
+            <a href="storage.html" class="dropdown-item">Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">AI Logic</a>
+          </div>
+        </div>
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="nav-link" target="_blank">NuGet</a>
+      </nav>
+
+      <button class="mobile-menu-btn" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">On this page</h4>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="sidebar-link active">Overview</a></li>
+          <li><a href="#email-password" class="sidebar-link">Email/Password</a></li>
+          <li><a href="#oauth-providers" class="sidebar-link">OAuth Providers</a></li>
+          <li><a href="#sign-out" class="sidebar-link">Sign Out</a></li>
+          <li><a href="#get-id-token" class="sidebar-link">Get ID Token</a></li>
+          <li><a href="#user-properties" class="sidebar-link">User Properties</a></li>
+          <li><a href="#auth-state-changes" class="sidebar-link">Auth State Changes</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Authentication</h1>
+        <p>Secure user authentication with multiple providers for your Blazor WebAssembly applications.</p>
+      </div>
+
+      <!-- Info Callout -->
+      <div class="callout callout-info">
+        <div class="callout-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          Blazor WebAssembly Only
+        </div>
+        <p class="mb-0">FireBlazor Authentication is currently designed for <strong>Blazor WebAssembly</strong> applications only. Blazor Server support is being evaluated for future releases.</p>
+      </div>
+
+      <!-- Overview Section -->
+      <h2 id="overview">Overview</h2>
+      <p>FireBlazor provides comprehensive authentication support with multiple providers. The authentication module integrates seamlessly with Blazor's authorization system, allowing you to use standard <code>[Authorize]</code> attributes and <code>&lt;AuthorizeView&gt;</code> components.</p>
+
+      <p>Supported authentication methods include:</p>
+      <ul>
+        <li><strong>Email/Password</strong> - Traditional email and password authentication</li>
+        <li><strong>Google OAuth</strong> - Sign in with Google accounts</li>
+        <li><strong>GitHub OAuth</strong> - Sign in with GitHub accounts</li>
+        <li><strong>Microsoft OAuth</strong> - Sign in with Microsoft accounts</li>
+      </ul>
+
+      <!-- Email/Password Section -->
+      <h2 id="email-password">Email/Password Authentication</h2>
+      <p>Email and password authentication allows users to create accounts and sign in using their email address and a password.</p>
+
+      <h3>Sign In with Email</h3>
+      <p>Use <code>SignInWithEmailAsync</code> to authenticate existing users with their email and password.</p>
+
+      <pre><code><span class="comment">// Sign in an existing user</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Auth.<span class="method">SignInWithEmailAsync</span>(<span class="string">"user@example.com"</span>, <span class="string">"password"</span>);
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Welcome, {user.DisplayName}!"</span>);
+}
+<span class="keyword">else</span>
+{
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Error: {result.Error.Message}"</span>);
+}</code></pre>
+
+      <h3>Create User with Email</h3>
+      <p>Use <code>CreateUserWithEmailAsync</code> to register new users with an email and password.</p>
+
+      <pre><code><span class="comment">// Create a new user account</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Auth.<span class="method">CreateUserWithEmailAsync</span>(<span class="string">"user@example.com"</span>, <span class="string">"password"</span>);
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Account created for {user.Email}"</span>);
+}
+<span class="keyword">else</span>
+{
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Error: {result.Error.Message}"</span>);
+}</code></pre>
+
+      <!-- OAuth Providers Section -->
+      <h2 id="oauth-providers">OAuth Providers</h2>
+      <p>FireBlazor supports popular OAuth providers for social sign-in. Each provider opens a popup window for the authentication flow.</p>
+
+      <h3>Sign In with Google</h3>
+      <p>Allow users to authenticate using their Google account.</p>
+
+      <pre><code><span class="comment">// Sign in with Google OAuth</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Auth.<span class="method">SignInWithGoogleAsync</span>();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Signed in as {user.DisplayName}"</span>);
+}</code></pre>
+
+      <h3>Sign In with GitHub</h3>
+      <p>Allow users to authenticate using their GitHub account.</p>
+
+      <pre><code><span class="comment">// Sign in with GitHub OAuth</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Auth.<span class="method">SignInWithGitHubAsync</span>();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Signed in as {user.DisplayName}"</span>);
+}</code></pre>
+
+      <h3>Sign In with Microsoft</h3>
+      <p>Allow users to authenticate using their Microsoft account.</p>
+
+      <pre><code><span class="comment">// Sign in with Microsoft OAuth</span>
+<span class="keyword">var</span> result = <span class="keyword">await</span> Firebase.Auth.<span class="method">SignInWithMicrosoftAsync</span>();
+
+<span class="keyword">if</span> (result.IsSuccess)
+{
+    <span class="keyword">var</span> user = result.Value;
+    Console.<span class="method">WriteLine</span>(<span class="string">$"Signed in as {user.DisplayName}"</span>);
+}</code></pre>
+
+      <!-- Sign Out Section -->
+      <h2 id="sign-out">Sign Out</h2>
+      <p>Use <code>SignOutAsync</code> to sign out the current user and clear their authentication state.</p>
+
+      <pre><code><span class="comment">// Sign out the current user</span>
+<span class="keyword">await</span> Firebase.Auth.<span class="method">SignOutAsync</span>();
+
+Console.<span class="method">WriteLine</span>(<span class="string">"User signed out successfully"</span>);</code></pre>
+
+      <!-- Get ID Token Section -->
+      <h2 id="get-id-token">Get ID Token</h2>
+      <p>Use <code>GetIdTokenAsync</code> to retrieve the current user's Firebase ID token. This token can be used to authenticate requests to your backend services.</p>
+
+      <pre><code><span class="comment">// Get the current ID token</span>
+<span class="keyword">var</span> tokenResult = <span class="keyword">await</span> Firebase.Auth.<span class="method">GetIdTokenAsync</span>();
+
+<span class="keyword">if</span> (tokenResult.IsSuccess)
+{
+    <span class="keyword">var</span> token = tokenResult.Value;
+    <span class="comment">// Use token for API calls</span>
+}</code></pre>
+
+      <h3>Force Refresh Token</h3>
+      <p>Pass <code>forceRefresh: true</code> to force a token refresh, even if the current token is still valid.</p>
+
+      <pre><code><span class="comment">// Force refresh the ID token</span>
+<span class="keyword">var</span> tokenResult = <span class="keyword">await</span> Firebase.Auth.<span class="method">GetIdTokenAsync</span>(forceRefresh: <span class="keyword">true</span>);
+
+<span class="keyword">if</span> (tokenResult.IsSuccess)
+{
+    <span class="keyword">var</span> freshToken = tokenResult.Value;
+    <span class="comment">// Token is guaranteed to be freshly retrieved</span>
+}</code></pre>
+
+      <!-- User Properties Section -->
+      <h2 id="user-properties">User Properties</h2>
+      <p>The <code>FirebaseUser</code> object provides access to various user properties after authentication.</p>
+
+      <pre><code><span class="type">FirebaseUser</span> user = Firebase.Auth.CurrentUser;
+
+<span class="comment">// Basic properties</span>
+<span class="keyword">string</span> uid = user.Uid;                    <span class="comment">// Unique user ID</span>
+<span class="keyword">string</span> email = user.Email;                <span class="comment">// User's email address</span>
+<span class="keyword">string</span> displayName = user.DisplayName;    <span class="comment">// User's display name</span>
+<span class="keyword">string</span> photoUrl = user.PhotoUrl;          <span class="comment">// Profile photo URL</span>
+
+<span class="comment">// Verification status</span>
+<span class="keyword">bool</span> isVerified = user.IsEmailVerified;   <span class="comment">// Email verification status</span>
+<span class="keyword">bool</span> isAnonymous = user.IsAnonymous;      <span class="comment">// Anonymous auth status</span>
+
+<span class="comment">// Provider information</span>
+<span class="type">IEnumerable</span>&lt;<span class="keyword">string</span>&gt; providers = user.Providers;  <span class="comment">// List of auth providers</span>
+
+<span class="comment">// Timestamps</span>
+<span class="type">DateTime</span>? createdAt = user.CreatedAt;         <span class="comment">// Account creation time</span>
+<span class="type">DateTime</span>? lastSignIn = user.LastSignInAt;     <span class="comment">// Last sign-in time</span></code></pre>
+
+      <h3>Available Properties</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>Uid</code></td>
+            <td><code>string</code></td>
+            <td>Unique identifier for the user</td>
+          </tr>
+          <tr>
+            <td><code>Email</code></td>
+            <td><code>string</code></td>
+            <td>User's email address</td>
+          </tr>
+          <tr>
+            <td><code>DisplayName</code></td>
+            <td><code>string</code></td>
+            <td>User's display name</td>
+          </tr>
+          <tr>
+            <td><code>PhotoUrl</code></td>
+            <td><code>string</code></td>
+            <td>URL to the user's profile photo</td>
+          </tr>
+          <tr>
+            <td><code>IsEmailVerified</code></td>
+            <td><code>bool</code></td>
+            <td>Whether the user's email has been verified</td>
+          </tr>
+          <tr>
+            <td><code>IsAnonymous</code></td>
+            <td><code>bool</code></td>
+            <td>Whether the user is signed in anonymously</td>
+          </tr>
+          <tr>
+            <td><code>Providers</code></td>
+            <td><code>IEnumerable&lt;string&gt;</code></td>
+            <td>List of authentication providers linked to this account</td>
+          </tr>
+          <tr>
+            <td><code>CreatedAt</code></td>
+            <td><code>DateTime?</code></td>
+            <td>When the user account was created</td>
+          </tr>
+          <tr>
+            <td><code>LastSignInAt</code></td>
+            <td><code>DateTime?</code></td>
+            <td>When the user last signed in</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Auth State Changes Section -->
+      <h2 id="auth-state-changes">Auth State Changes</h2>
+      <p>Subscribe to the <code>OnAuthStateChanged</code> event to react to authentication state changes. This is useful for updating your UI when users sign in or out.</p>
+
+      <pre><code><span class="directive">@inject</span> <span class="type">IFirebase</span> Firebase
+
+&lt;<span class="type">h3</span>&gt;Welcome, @_user?.DisplayName&lt;/<span class="type">h3</span>&gt;
+
+<span class="directive">@code</span> {
+    <span class="keyword">private</span> <span class="type">FirebaseUser</span>? _user;
+
+    <span class="keyword">protected override void</span> <span class="method">OnInitialized</span>()
+    {
+        <span class="comment">// Get initial user state</span>
+        _user = Firebase.Auth.CurrentUser;
+
+        <span class="comment">// Subscribe to auth state changes</span>
+        Firebase.Auth.OnAuthStateChanged += <span class="method">HandleAuthStateChanged</span>;
+    }
+
+    <span class="keyword">private void</span> <span class="method">HandleAuthStateChanged</span>(<span class="type">FirebaseUser</span>? user)
+    {
+        _user = user;
+        <span class="method">InvokeAsync</span>(StateHasChanged);
+    }
+
+    <span class="keyword">public void</span> <span class="method">Dispose</span>()
+    {
+        <span class="comment">// Unsubscribe when component is disposed</span>
+        Firebase.Auth.OnAuthStateChanged -= <span class="method">HandleAuthStateChanged</span>;
+    }
+}</code></pre>
+
+      <div class="callout callout-warning">
+        <div class="callout-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Remember to Unsubscribe
+        </div>
+        <p class="mb-0">Always unsubscribe from the <code>OnAuthStateChanged</code> event when your component is disposed to prevent memory leaks. Implement <code>IDisposable</code> and remove the event handler in the <code>Dispose</code> method.</p>
+      </div>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <a href="getting-started.html" class="page-nav-link prev">
+          <span class="page-nav-label">Previous</span>
+          <span class="page-nav-title">Getting Started</span>
+        </a>
+        <a href="firestore.html" class="page-nav-link next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Firestore</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>🔥</span>
+        FireBlazor
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/blob/master/LICENSE" class="footer-link" target="_blank">License</a>
+      </div>
+      <div class="footer-copyright">
+        MIT License. Built for Blazor developers.
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+</body>
+</html>

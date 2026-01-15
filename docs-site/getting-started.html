@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Get started with FireBlazor - Firebase for Blazor WebAssembly. Learn installation, configuration, and basic usage.">
+  <title>Getting Started - FireBlazor Documentation</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">🔥</span>
+        FireBlazor
+      </a>
+
+      <nav class="nav">
+        <a href="getting-started.html" class="nav-link active">Getting Started</a>
+
+        <div class="dropdown">
+          <span class="nav-link dropdown-trigger">Docs</span>
+          <div class="dropdown-menu">
+            <a href="authentication.html" class="dropdown-item">Authentication</a>
+            <a href="firestore.html" class="dropdown-item">Cloud Firestore</a>
+            <a href="storage.html" class="dropdown-item">Cloud Storage</a>
+            <a href="realtime-database.html" class="dropdown-item">Realtime Database</a>
+            <a href="ai-logic.html" class="dropdown-item">Firebase AI Logic</a>
+            <a href="app-check.html" class="dropdown-item">App Check</a>
+          </div>
+        </div>
+
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="nav-link" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </nav>
+
+      <button class="mobile-menu-btn" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Documentation Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">On this page</h4>
+        <ul class="sidebar-nav">
+          <li><a href="#installation" class="sidebar-link">Installation</a></li>
+          <li><a href="#configuration" class="sidebar-link">Configuration</a></li>
+          <li><a href="#initialize-firebase" class="sidebar-link">Initialize Firebase</a></li>
+          <li><a href="#basic-usage" class="sidebar-link">Basic Usage</a></li>
+          <li><a href="#blazor-authorization" class="sidebar-link">Blazor Authorization</a></li>
+          <li><a href="#emulator-support" class="sidebar-link">Emulator Support</a></li>
+          <li><a href="#testing" class="sidebar-link">Testing</a></li>
+          <li><a href="#configuration-appsettings" class="sidebar-link">Configuration from appsettings.json</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+      <div class="docs-header">
+        <h1>Getting Started</h1>
+        <p>Learn how to install and configure FireBlazor in your Blazor WebAssembly application.</p>
+      </div>
+
+      <!-- Installation Section -->
+      <section id="installation">
+        <h2>Installation</h2>
+        <p>Install FireBlazor via NuGet Package Manager or the .NET CLI:</p>
+
+        <pre><code><span class="comment"># Using .NET CLI</span>
+dotnet add package FireBlazor</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            Requirements
+          </div>
+          <p>FireBlazor requires:</p>
+          <ul>
+            <li><strong>.NET 8.0, 9.0, or 10.0</strong></li>
+            <li><strong>Blazor WebAssembly</strong> project</li>
+            <li>A Firebase project with desired services enabled</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Configuration Section -->
+      <section id="configuration">
+        <h2>Configuration</h2>
+        <p>Configure FireBlazor in your <code>Program.cs</code> file. Here's a complete example with all available options:</p>
+
+        <pre><code><span class="comment">// Program.cs</span>
+<span class="keyword">var</span> builder = <span class="type">WebAssemblyHostBuilder</span>.<span class="method">CreateDefault</span>(args);
+
+builder.Services.<span class="method">AddFirebase</span>(options => options
+    .<span class="method">WithProject</span>(<span class="string">"your-project-id"</span>)
+    .<span class="method">WithApiKey</span>(<span class="string">"your-api-key"</span>)
+    .<span class="method">WithAuthDomain</span>(<span class="string">"your-project.firebaseapp.com"</span>)
+    .<span class="method">WithStorageBucket</span>(<span class="string">"your-project.firebasestorage.app"</span>)
+    .<span class="method">WithDatabaseUrl</span>(<span class="string">"https://your-project.firebasedatabase.app"</span>)
+    .<span class="method">UseAuth</span>(auth => auth
+        .<span class="method">EnableEmailPassword</span>()
+        .<span class="method">EnableGoogle</span>(<span class="string">"google-client-id"</span>))
+    .<span class="method">UseFirestore</span>()
+    .<span class="method">UseStorage</span>()
+    .<span class="method">UseRealtimeDatabase</span>()
+    .<span class="method">UseAppCheck</span>(appCheck => appCheck
+        .<span class="method">ReCaptchaV3</span>(<span class="string">"your-recaptcha-site-key"</span>)));</code></pre>
+
+        <h3>Configuration Options</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>WithProject()</code></td>
+              <td>Your Firebase project ID</td>
+            </tr>
+            <tr>
+              <td><code>WithApiKey()</code></td>
+              <td>Your Firebase Web API key</td>
+            </tr>
+            <tr>
+              <td><code>WithAuthDomain()</code></td>
+              <td>Authentication domain for OAuth flows</td>
+            </tr>
+            <tr>
+              <td><code>WithStorageBucket()</code></td>
+              <td>Cloud Storage bucket URL</td>
+            </tr>
+            <tr>
+              <td><code>WithDatabaseUrl()</code></td>
+              <td>Realtime Database URL</td>
+            </tr>
+            <tr>
+              <td><code>UseAuth()</code></td>
+              <td>Enable authentication with providers</td>
+            </tr>
+            <tr>
+              <td><code>UseFirestore()</code></td>
+              <td>Enable Cloud Firestore</td>
+            </tr>
+            <tr>
+              <td><code>UseStorage()</code></td>
+              <td>Enable Cloud Storage</td>
+            </tr>
+            <tr>
+              <td><code>UseRealtimeDatabase()</code></td>
+              <td>Enable Realtime Database</td>
+            </tr>
+            <tr>
+              <td><code>UseAppCheck()</code></td>
+              <td>Enable App Check with reCAPTCHA</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Initialize Firebase Section -->
+      <section id="initialize-firebase">
+        <h2>Initialize Firebase</h2>
+        <p>Before using any Firebase services, you need to initialize the SDK. Do this in your main layout or app component:</p>
+
+        <pre><code><span class="keyword">@inject</span> <span class="type">IFirebase</span> Firebase
+
+<span class="keyword">@code</span> {
+    <span class="keyword">protected override async</span> <span class="type">Task</span> <span class="method">OnInitializedAsync</span>()
+    {
+        <span class="keyword">await</span> Firebase.<span class="method">InitializeAsync</span>();
+    }
+}</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            Important
+          </div>
+          <p>Always call <code>InitializeAsync()</code> before attempting to use any Firebase services. This ensures the JavaScript SDK is properly loaded and configured.</p>
+        </div>
+      </section>
+
+      <!-- Basic Usage Section -->
+      <section id="basic-usage">
+        <h2>Basic Usage</h2>
+        <p>Once initialized, you can access Firebase services through the <code>IFirebase</code> interface. Here's an example showing how to subscribe to authentication state changes:</p>
+
+        <pre><code><span class="keyword">@inject</span> <span class="type">IFirebase</span> Firebase
+
+<span class="operator">&lt;</span>h3<span class="operator">&gt;</span>Welcome, @_user?.DisplayName<span class="operator">&lt;</span>/h3<span class="operator">&gt;</span>
+
+<span class="keyword">@code</span> {
+    <span class="keyword">private</span> <span class="type">FirebaseUser</span>? _user;
+
+    <span class="keyword">protected override void</span> <span class="method">OnInitialized</span>()
+    {
+        _user = Firebase.Auth.CurrentUser;
+        Firebase.Auth.OnAuthStateChanged += user =>
+        {
+            _user = user;
+            <span class="method">InvokeAsync</span>(StateHasChanged);
+        };
+    }
+}</code></pre>
+
+        <p>This pattern allows your components to react to authentication changes in real-time, automatically updating the UI when users sign in or out.</p>
+      </section>
+
+      <!-- Blazor Authorization Section -->
+      <section id="blazor-authorization">
+        <h2>Blazor Authorization</h2>
+        <p>FireBlazor integrates seamlessly with Blazor's built-in authorization system. Enable it by adding <code>AddFirebaseAuthorization</code> to your services:</p>
+
+        <pre><code><span class="comment">// Program.cs</span>
+builder.Services.<span class="method">AddFirebaseAuthorization</span>(options =>
+{
+    options.LoginPath = <span class="string">"/login"</span>;
+    options.AccessDeniedPath = <span class="string">"/access-denied"</span>;
+});</code></pre>
+
+        <p>Once configured, you can use standard Blazor authorization features:</p>
+
+        <pre><code><span class="comment">// Use [Authorize] attribute on pages</span>
+<span class="keyword">@page</span> <span class="string">"/dashboard"</span>
+<span class="keyword">@attribute</span> [<span class="type">Authorize</span>]
+
+<span class="operator">&lt;</span>h1<span class="operator">&gt;</span>Dashboard<span class="operator">&lt;</span>/h1<span class="operator">&gt;</span>
+
+<span class="comment">// Or use AuthorizeView component</span>
+<span class="operator">&lt;</span><span class="type">AuthorizeView</span><span class="operator">&gt;</span>
+    <span class="operator">&lt;</span>Authorized<span class="operator">&gt;</span>
+        <span class="operator">&lt;</span>p<span class="operator">&gt;</span>Hello, @context.User.Identity?.Name!<span class="operator">&lt;</span>/p<span class="operator">&gt;</span>
+    <span class="operator">&lt;</span>/Authorized<span class="operator">&gt;</span>
+    <span class="operator">&lt;</span>NotAuthorized<span class="operator">&gt;</span>
+        <span class="operator">&lt;</span>p<span class="operator">&gt;</span>Please sign in to continue.<span class="operator">&lt;</span>/p<span class="operator">&gt;</span>
+    <span class="operator">&lt;</span>/NotAuthorized<span class="operator">&gt;</span>
+<span class="operator">&lt;</span>/<span class="type">AuthorizeView</span><span class="operator">&gt;</span></code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            Tip
+          </div>
+          <p>The <code>LoginPath</code> is where unauthenticated users are redirected. The <code>AccessDeniedPath</code> is where authenticated users without proper permissions are redirected.</p>
+        </div>
+      </section>
+
+      <!-- Emulator Support Section -->
+      <section id="emulator-support">
+        <h2>Emulator Support</h2>
+        <p>FireBlazor provides full support for the Firebase Emulator Suite, making local development and testing a breeze:</p>
+
+        <pre><code>builder.Services.<span class="method">AddFirebase</span>(options => options
+    .<span class="method">WithProject</span>(<span class="string">"demo-project"</span>)
+    <span class="comment">// ... other configuration</span>
+    .<span class="method">UseEmulators</span>(emulators => emulators
+        .<span class="method">Auth</span>(<span class="string">"localhost:9099"</span>)
+        .<span class="method">Firestore</span>(<span class="string">"localhost:8080"</span>)
+        .<span class="method">Storage</span>(<span class="string">"localhost:9199"</span>)
+        .<span class="method">RealtimeDatabase</span>(<span class="string">"localhost:9000"</span>)));</code></pre>
+
+        <p>You can also configure all emulators at once with default ports:</p>
+
+        <pre><code><span class="comment">// Configure all emulators with default ports</span>
+.<span class="method">UseEmulators</span>(emulators => emulators.<span class="method">All</span>(<span class="string">"localhost"</span>))</code></pre>
+
+        <h3>Default Emulator Ports</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Default Port</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Authentication</td>
+              <td>9099</td>
+            </tr>
+            <tr>
+              <td>Cloud Firestore</td>
+              <td>8080</td>
+            </tr>
+            <tr>
+              <td>Cloud Storage</td>
+              <td>9199</td>
+            </tr>
+            <tr>
+              <td>Realtime Database</td>
+              <td>9000</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Testing Section -->
+      <section id="testing">
+        <h2>Testing</h2>
+        <p>FireBlazor provides fake implementations for unit testing, allowing you to test your components without connecting to Firebase:</p>
+
+        <pre><code><span class="comment">// Register fake services in your test setup</span>
+services.<span class="method">AddSingleton</span>&lt;<span class="type">IFirebase</span>, <span class="type">FakeFirebase</span>&gt;();
+
+<span class="comment">// In your tests</span>
+<span class="keyword">var</span> fakeFirebase = serviceProvider
+    .<span class="method">GetRequiredService</span>&lt;<span class="type">IFirebase</span>&gt;() <span class="keyword">as</span> <span class="type">FakeFirebase</span>;
+
+<span class="comment">// Configure fake authentication state</span>
+fakeFirebase.FakeAuth.<span class="method">SetCurrentUser</span>(<span class="keyword">new</span> <span class="type">FirebaseUser</span>
+{
+    Uid = <span class="string">"test-user"</span>,
+    Email = <span class="string">"test@example.com"</span>,
+    DisplayName = <span class="string">"Test User"</span>
+});
+
+<span class="comment">// Reset between tests</span>
+fakeFirebase.<span class="method">Reset</span>();</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            Testing Best Practice
+          </div>
+          <p>Always call <code>Reset()</code> between tests to ensure a clean state. The fake implementations maintain state across calls, just like the real Firebase services.</p>
+        </div>
+      </section>
+
+      <!-- Configuration from appsettings.json Section -->
+      <section id="configuration-appsettings">
+        <h2>Configuration from appsettings.json</h2>
+        <p>For production applications, you may want to store your Firebase configuration in <code>appsettings.json</code>:</p>
+
+        <pre><code>{
+  <span class="property">"Firebase"</span>: {
+    <span class="property">"ProjectId"</span>: <span class="string">"your-project-id"</span>,
+    <span class="property">"ApiKey"</span>: <span class="string">"your-api-key"</span>,
+    <span class="property">"AuthDomain"</span>: <span class="string">"your-project.firebaseapp.com"</span>,
+    <span class="property">"StorageBucket"</span>: <span class="string">"your-project.firebasestorage.app"</span>,
+    <span class="property">"DatabaseUrl"</span>: <span class="string">"https://your-project.firebasedatabase.app"</span>
+  }
+}</code></pre>
+
+        <p>Then load the configuration in <code>Program.cs</code>:</p>
+
+        <pre><code>builder.Services.<span class="method">AddFirebase</span>(configuration, options => options
+    .<span class="method">UseAuth</span>()
+    .<span class="method">UseFirestore</span>());</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            Security Note
+          </div>
+          <p>Firebase Web API keys are safe to expose in client-side code - they only identify your project. Security is enforced through Firebase Security Rules. Never expose service account credentials or admin SDK keys in client-side applications.</p>
+        </div>
+      </section>
+
+      <!-- Page Navigation -->
+      <nav class="page-nav">
+        <div></div>
+        <a href="authentication.html" class="page-nav-link next">
+          <span class="page-nav-label">Next</span>
+          <span class="page-nav-title">Authentication →</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span>🔥</span>
+        FireBlazor
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/mashrulhaque/FireBlazor" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.nuget.org/packages/FireBlazor" class="footer-link" target="_blank" rel="noopener">NuGet</a>
+        <a href="https://github.com/mashrulhaque/FireBlazor/blob/master/LICENSE" class="footer-link" target="_blank" rel="noopener">MIT License</a>
+      </div>
+
+      <p class="footer-copyright">
+        Built with love for Blazor developers.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>
