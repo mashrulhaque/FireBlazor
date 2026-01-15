@@ -183,11 +183,14 @@ public class FirebaseAuthenticationStateProviderTests
     private static string CreateTokenWithSingleRole(FirebaseUser user, string role)
     {
         var header = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"alg\":\"RS256\",\"typ\":\"JWT\"}"));
+        // Add exp claim set to 1 hour in the future
+        var exp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
         var payloadObj = new Dictionary<string, object>
         {
             ["sub"] = user.Uid,
             ["email"] = user.Email ?? "",
-            ["roles"] = role // Single string, not array
+            ["roles"] = role, // Single string, not array
+            ["exp"] = exp
         };
         var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
             System.Text.Json.JsonSerializer.Serialize(payloadObj)));
@@ -198,11 +201,14 @@ public class FirebaseAuthenticationStateProviderTests
     private static string CreateTokenWithCustomClaim(FirebaseUser user, string claimName, string[] values)
     {
         var header = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"alg\":\"RS256\",\"typ\":\"JWT\"}"));
+        // Add exp claim set to 1 hour in the future
+        var exp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
         var payloadObj = new Dictionary<string, object>
         {
             ["sub"] = user.Uid,
             ["email"] = user.Email ?? "",
-            [claimName] = values
+            [claimName] = values,
+            ["exp"] = exp
         };
         var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
             System.Text.Json.JsonSerializer.Serialize(payloadObj)));

@@ -141,14 +141,33 @@ public sealed class FunctionRegistry
         try
         {
             var parameters = registered.Method.GetParameters();
+            var requiredParams = registered.Declaration.Parameters?.Required ?? new List<string>();
             var args = new object?[parameters.Length];
 
             for (var i = 0; i < parameters.Length; i++)
             {
                 var param = parameters[i];
-                if (call.Arguments.TryGetProperty(param.Name!, out var value))
+                var paramName = param.Name!;
+                var paramAttr = param.GetCustomAttribute<AIParameterAttribute>();
+
+                if (call.Arguments.TryGetProperty(paramName, out var value))
                 {
-                    args[i] = value.Deserialize(param.ParameterType);
+                    // Validate and deserialize the parameter value
+                    var validationResult = ValidateAndDeserializeArgument(
+                        paramName, value, param.ParameterType, paramAttr);
+
+                    if (!validationResult.IsValid)
+                    {
+                        return FunctionResponse.FromError(call.Name, validationResult.ErrorMessage!);
+                    }
+
+                    args[i] = validationResult.Value;
+                }
+                else if (requiredParams.Contains(paramName))
+                {
+                    // Required parameter is missing
+                    return FunctionResponse.FromError(call.Name,
+                        $"Required parameter '{paramName}' is missing");
                 }
                 else if (param.HasDefaultValue)
                 {
@@ -167,10 +186,126 @@ public sealed class FunctionRegistry
 
             return FunctionResponse.FromObject(call.Name, result ?? "Function completed successfully");
         }
-        catch (Exception ex)
+        catch (TargetInvocationException)
         {
-            return FunctionResponse.FromError(call.Name, ex.Message);
+            // Do not expose internal details from invocation exceptions
+            return FunctionResponse.FromError(call.Name, "Function execution failed");
         }
+        catch (Exception)
+        {
+            // Return sanitized error message without exposing internal details
+            return FunctionResponse.FromError(call.Name, "An error occurred while executing the function");
+        }
+    }
+
+    /// <summary>
+    /// Validates and deserializes a single argument value.
+    /// </summary>
+    private static ArgumentValidationResult ValidateAndDeserializeArgument(
+        string paramName,
+        JsonElement value,
+        Type targetType,
+        AIParameterAttribute? paramAttr)
+    {
+        object? deserializedValue;
+
+        // Attempt deserialization with proper error handling
+        try
+        {
+            deserializedValue = value.Deserialize(targetType);
+        }
+        catch (JsonException)
+        {
+            return ArgumentValidationResult.Invalid(
+                $"Parameter '{paramName}' has an invalid format");
+        }
+        catch (InvalidOperationException)
+        {
+            return ArgumentValidationResult.Invalid(
+                $"Parameter '{paramName}' could not be converted to the expected type");
+        }
+        catch (Exception)
+        {
+            return ArgumentValidationResult.Invalid(
+                $"Parameter '{paramName}' is invalid");
+        }
+
+        // Validate numeric bounds if constraints are specified
+        if (paramAttr != null && deserializedValue != null)
+        {
+            var boundsError = ValidateNumericBounds(paramName, deserializedValue, paramAttr);
+            if (boundsError != null)
+            {
+                return ArgumentValidationResult.Invalid(boundsError);
+            }
+        }
+
+        return ArgumentValidationResult.Valid(deserializedValue);
+    }
+
+    /// <summary>
+    /// Validates that a numeric value is within specified bounds.
+    /// </summary>
+    private static string? ValidateNumericBounds(
+        string paramName,
+        object value,
+        AIParameterAttribute paramAttr)
+    {
+        // Only validate if bounds are explicitly set
+        if (!paramAttr.HasMinValue && !paramAttr.HasMaxValue)
+        {
+            return null;
+        }
+
+        double? numericValue = value switch
+        {
+            int i => i,
+            long l => l,
+            float f => f,
+            double d => d,
+            decimal m => (double)m,
+            _ => null
+        };
+
+        if (numericValue == null)
+        {
+            return null; // Not a numeric type, skip bounds validation
+        }
+
+        if (paramAttr.HasMinValue && numericValue < paramAttr.MinValue)
+        {
+            return $"Parameter '{paramName}' value is below the minimum allowed value";
+        }
+
+        if (paramAttr.HasMaxValue && numericValue > paramAttr.MaxValue)
+        {
+            return $"Parameter '{paramName}' value exceeds the maximum allowed value";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Result of argument validation.
+    /// </summary>
+    private readonly struct ArgumentValidationResult
+    {
+        public bool IsValid { get; }
+        public object? Value { get; }
+        public string? ErrorMessage { get; }
+
+        private ArgumentValidationResult(bool isValid, object? value, string? errorMessage)
+        {
+            IsValid = isValid;
+            Value = value;
+            ErrorMessage = errorMessage;
+        }
+
+        public static ArgumentValidationResult Valid(object? value) =>
+            new(true, value, null);
+
+        public static ArgumentValidationResult Invalid(string errorMessage) =>
+            new(false, null, errorMessage);
     }
 
     /// <summary>

@@ -26,8 +26,8 @@ internal sealed class WasmStorageReference : IStorageReference
 
     public IStorageReference Child(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        var combinedPath = $"{_path.TrimEnd('/')}/{path.TrimStart('/')}";
+        PathValidation.ValidatePath(path, nameof(path));
+        var combinedPath = $"{_path.TrimEnd('/')}/{path.Trim('/')}";
         return new WasmStorageReference(_jsInterop, combinedPath, _maxBrowserFileSize);
     }
 

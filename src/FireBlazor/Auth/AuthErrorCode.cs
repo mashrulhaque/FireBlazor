@@ -16,6 +16,11 @@ public enum AuthErrorCode
     OperationNotAllowed,
     AccountExistsWithDifferentCredential,
     InvalidCredential,
+    /// <summary>
+    /// Generic invalid credentials error for user-facing scenarios.
+    /// Use this instead of UserNotFound/WrongPassword to prevent user enumeration.
+    /// </summary>
+    InvalidCredentials,
     InvalidVerificationCode,
     InvalidVerificationId,
     RequiresRecentLogin,
@@ -68,6 +73,23 @@ public static class AuthErrorCodeExtensions
         AuthErrorCode.CredentialAlreadyInUse => "auth/credential-already-in-use",
         AuthErrorCode.PopupClosedByUser => "auth/popup-closed-by-user",
         AuthErrorCode.NetworkRequestFailed => "auth/network-request-failed",
+        AuthErrorCode.InvalidCredentials => "auth/invalid-credentials",
         _ => "auth/unknown"
     };
+
+    /// <summary>
+    /// Gets a user-safe error code that doesn't leak user existence information.
+    /// Use this when displaying error messages to end users to prevent user enumeration attacks.
+    /// </summary>
+    /// <param name="code">The original error code.</param>
+    /// <returns>A sanitized error code safe for user-facing scenarios.</returns>
+    public static AuthErrorCode ToUserSafeCode(this AuthErrorCode code)
+    {
+        return code switch
+        {
+            AuthErrorCode.UserNotFound => AuthErrorCode.InvalidCredentials,
+            AuthErrorCode.WrongPassword => AuthErrorCode.InvalidCredentials,
+            _ => code
+        };
+    }
 }

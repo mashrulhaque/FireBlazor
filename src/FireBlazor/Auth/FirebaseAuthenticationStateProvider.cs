@@ -107,6 +107,27 @@ public sealed class FirebaseAuthenticationStateProvider : AuthenticationStatePro
         return new ClaimsPrincipal(identity);
     }
 
+    /// <summary>
+    /// Extracts role claims from a Firebase ID token (JWT).
+    /// </summary>
+    /// <param name="idToken">The Firebase ID token in JWT format.</param>
+    /// <returns>A collection of role strings extracted from the token, or empty if the token is invalid or expired.</returns>
+    /// <remarks>
+    /// <para>
+    /// <strong>SECURITY NOTE:</strong> This method performs client-side JWT parsing only.
+    /// The JWT signature is NOT validated because Firebase's public keys would need to be
+    /// fetched and verified, which is not practical in a Blazor WebAssembly context.
+    /// </para>
+    /// <para>
+    /// Full JWT validation (including signature verification) should be performed server-side
+    /// when the token is used for API calls. This client-side extraction is only for UI
+    /// authorization purposes (showing/hiding UI elements based on roles).
+    /// </para>
+    /// <para>
+    /// This method DOES validate the token expiration (<c>exp</c> claim) to prevent using
+    /// stale tokens for UI authorization decisions.
+    /// </para>
+    /// </remarks>
     private IEnumerable<string> ExtractRolesFromToken(string idToken)
     {
         try
@@ -125,6 +146,33 @@ public sealed class FirebaseAuthenticationStateProvider : AuthenticationStatePro
 
             var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
             using var document = JsonDocument.Parse(json);
+
+            // SECURITY: Validate token expiration before extracting roles
+            // The 'exp' claim is a Unix timestamp (seconds since epoch)
+            if (document.RootElement.TryGetProperty("exp", out var expElement))
+            {
+                if (expElement.TryGetInt64(out var expUnixSeconds))
+                {
+                    var currentUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    if (expUnixSeconds < currentUnixSeconds)
+                    {
+                        _logger.LogWarning(
+                            "Firebase ID token has expired. Token exp: {TokenExpiration}, Current time: {CurrentTime}. " +
+                            "Treating user as unauthenticated for role-based authorization.",
+                            DateTimeOffset.FromUnixTimeSeconds(expUnixSeconds),
+                            DateTimeOffset.UtcNow);
+                        return [];
+                    }
+                }
+            }
+            else
+            {
+                // Tokens without an 'exp' claim should be treated as suspicious
+                _logger.LogWarning(
+                    "Firebase ID token is missing the 'exp' claim. " +
+                    "Treating user as unauthenticated for role-based authorization.");
+                return [];
+            }
 
             if (document.RootElement.TryGetProperty(_options.RolesClaimName, out var rolesElement))
             {

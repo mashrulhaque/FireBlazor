@@ -34,8 +34,8 @@ internal sealed class WasmDatabaseReference : IDatabaseReference
 
     public IDatabaseReference Child(string path)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        var combinedPath = $"{_path.TrimEnd('/')}/{path.TrimStart('/')}";
+        PathValidation.ValidatePath(path, nameof(path));
+        var combinedPath = $"{_path.TrimEnd('/')}/{path.Trim('/')}";
         return new WasmDatabaseReference(_jsInterop, combinedPath, _queryParams);
     }
 

@@ -1,5 +1,21 @@
 @namespace FireBlazor.Components
+@using Microsoft.Extensions.Hosting
 @implements IDisposable
+
+@inject IHostEnvironment HostEnvironment
+
+@*
+    WARNING: This component is intended for DEVELOPMENT USE ONLY.
+    It exposes sensitive user information (UID, email, provider data) and should
+    never be rendered in production environments. The component automatically
+    disables itself when not running in Development mode.
+*@
+
+@if (!HostEnvironment.IsDevelopment())
+{
+    @* Component disabled in non-development environments for security *@
+    return;
+}
 
 <div class="firebase-debug-panel @(IsExpanded ? "expanded" : "collapsed")">
     <div class="debug-header" @onclick="TogglePanel">
@@ -265,6 +281,16 @@
 </style>
 
 @code {
+    /// <summary>
+    /// DEBUG ONLY: A debug panel that displays Firebase authentication state, active subscriptions,
+    /// recent operations, and errors. This component automatically disables itself in non-development
+    /// environments to prevent exposure of sensitive user information (UID, email, provider data).
+    /// <para>
+    /// <b>WARNING:</b> This component should only be used during development. It will render nothing
+    /// in Production or Staging environments.
+    /// </para>
+    /// </summary>
+
     [Parameter]
     public bool IsExpanded { get; set; } = true;
 

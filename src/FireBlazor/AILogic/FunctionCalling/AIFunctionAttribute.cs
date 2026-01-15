@@ -35,4 +35,26 @@ public sealed class AIParameterAttribute : Attribute
     /// Defaults to true for non-nullable reference types.
     /// </summary>
     public bool Required { get; set; } = true;
+
+    /// <summary>
+    /// Minimum value constraint for numeric parameters.
+    /// Only applies to numeric types (int, long, float, double, decimal).
+    /// </summary>
+    public double MinValue { get; set; } = double.MinValue;
+
+    /// <summary>
+    /// Maximum value constraint for numeric parameters.
+    /// Only applies to numeric types (int, long, float, double, decimal).
+    /// </summary>
+    public double MaxValue { get; set; } = double.MaxValue;
+
+    /// <summary>
+    /// Indicates whether bounds constraints have been explicitly set.
+    /// </summary>
+    internal bool HasMinValue => MinValue != double.MinValue;
+
+    /// <summary>
+    /// Indicates whether bounds constraints have been explicitly set.
+    /// </summary>
+    internal bool HasMaxValue => MaxValue != double.MaxValue;
 }

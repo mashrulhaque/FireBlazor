@@ -103,7 +103,7 @@ internal sealed class WasmCollectionReference<T> : ICollectionReference<T> where
 
     public IDocumentReference<T> Document(string id)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        PathValidation.ValidatePath(id, nameof(id));
         return new WasmDocumentReference<T>(_jsInterop, $"{_path}/{id}");
     }
 

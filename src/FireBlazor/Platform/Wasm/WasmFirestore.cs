@@ -250,7 +250,7 @@ internal sealed class ExecutingTransaction : ITransaction
         if (!_readData.TryGetValue(doc.Path, out var data))
         {
             return Task.FromResult(Result<DocumentSnapshot<T>>.Failure(
-                new FirebaseError("firestore/not-found", $"Document {doc.Path} was not pre-read")));
+                new FirebaseError("firestore/not-found", "Document was not pre-read in transaction")));
         }
 
         var snapshot = ParseSnapshot<T>(data, doc.Id, doc.Path);
