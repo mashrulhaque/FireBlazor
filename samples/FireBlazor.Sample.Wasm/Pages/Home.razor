@@ -1,0 +1,70 @@
+@page "/"
+
+<PageTitle>FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <div class="text-center mb-5">
+        <h1 class="display-4">FireBlazor</h1>
+        <p class="lead text-muted">Firebase for Blazor - Zero boilerplate, delightful DX</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Authentication</h5>
+                    <p class="card-text">Sign in with email/password or OAuth providers like Google and GitHub.</p>
+                    <a href="login" class="btn btn-primary">Try Login</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Cloud Firestore</h5>
+                    <p class="card-text">Full CRUD operations with Firestore. Create, read, update, and delete documents.</p>
+                    <a href="crud" class="btn btn-primary">Try CRUD</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Cloud Storage</h5>
+                    <p class="card-text">Upload files to Firebase Storage with progress tracking and download URLs.</p>
+                    <a href="upload" class="btn btn-primary">Try Upload</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Realtime Database</h5>
+                    <p class="card-text">Real-time data synchronization with Firebase Realtime Database listeners.</p>
+                    <a href="realtime" class="btn btn-primary">Try Realtime</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <h4>Getting Started</h4>
+        <p>To use this sample with your Firebase project:</p>
+        <ol>
+            <li>Update <code>Program.cs</code> with your Firebase project configuration</li>
+            <li>Enable the Firebase services you want to use in the Firebase Console</li>
+            <li>For local development, consider using Firebase Emulators</li>
+        </ol>
+
+        <pre class="bg-dark text-light p-3 rounded"><code>builder.Services.AddFirebase(options => options
+    .WithProject("your-project-id")
+    .WithApiKey("your-api-key")
+    .UseAuth()
+    .UseFirestore()
+    .UseStorage()
+    .UseRealtimeDatabase());</code></pre>
+    </div>
+</div>

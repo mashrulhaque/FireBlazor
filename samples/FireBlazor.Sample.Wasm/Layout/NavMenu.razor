@@ -1,0 +1,123 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">FireBlazor Sample</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="login">
+                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Login
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="protected">
+                <span class="bi bi-shield-lock-fill-nav-menu" aria-hidden="true"></span> Protected
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="crud">
+                <span class="bi bi-database-fill-nav-menu" aria-hidden="true"></span> CRUD (Firestore)
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="firestore-realtime">
+                <span class="bi bi-broadcast-pin-nav-menu" aria-hidden="true"></span> Firestore Realtime
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="upload">
+                <span class="bi bi-cloud-upload-fill-nav-menu" aria-hidden="true"></span> File Upload
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="realtime">
+                <span class="bi bi-broadcast-nav-menu" aria-hidden="true"></span> Realtime DB
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="appcheck">
+                <span class="bi bi-shield-check-nav-menu" aria-hidden="true"></span> App Check
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ai-demo">
+                <span class="bi bi-stars" aria-hidden="true"></span> AI Demo
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="chat-demo">
+                <span class="bi bi-chat-dots" aria-hidden="true"></span> Chat Demo
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="vision">
+                <span class="bi bi-eye" aria-hidden="true"></span> Vision Demo
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="document-demo">
+                <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Document Demo
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="imagen-demo">
+                <span class="bi bi-image" aria-hidden="true"></span> Imagen
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="advanced-ai">
+                <span class="bi bi-gear" aria-hidden="true"></span> Advanced AI
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 mt-3">
+            <h6 class="text-muted small text-uppercase">Advanced Firestore</h6>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="fieldvalues">
+                <span class="bi bi-lightning-fill-nav-menu" aria-hidden="true"></span> Field Values
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="batchwrites">
+                <span class="bi bi-collection-fill-nav-menu" aria-hidden="true"></span> Batch Writes
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="transactions">
+                <span class="bi bi-arrow-left-right-nav-menu" aria-hidden="true"></span> Transactions
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="aggregates">
+                <span class="bi bi-calculator-fill-nav-menu" aria-hidden="true"></span> Aggregates
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="cursorpagination">
+                <span class="bi bi-chevron-bar-right-nav-menu" aria-hidden="true"></span> Cursor Pagination
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

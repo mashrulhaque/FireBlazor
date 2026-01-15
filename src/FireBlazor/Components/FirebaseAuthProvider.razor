@@ -1,0 +1,38 @@
+@namespace FireBlazor.Components
+@implements IDisposable
+
+<CascadingValue Value="@_currentUser" Name="FirebaseUser">
+    <CascadingValue Value="@_isAuthenticated" Name="IsAuthenticated">
+        @ChildContent
+    </CascadingValue>
+</CascadingValue>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Inject]
+    private IFirebase Firebase { get; set; } = default!;
+
+    private FirebaseUser? _currentUser;
+    private bool _isAuthenticated;
+
+    protected override void OnInitialized()
+    {
+        Firebase.Auth.OnAuthStateChanged += HandleAuthStateChanged;
+        _currentUser = Firebase.Auth.CurrentUser;
+        _isAuthenticated = Firebase.Auth.IsAuthenticated;
+    }
+
+    private void HandleAuthStateChanged(FirebaseUser? user)
+    {
+        _currentUser = user;
+        _isAuthenticated = user != null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Firebase.Auth.OnAuthStateChanged -= HandleAuthStateChanged;
+    }
+}

@@ -1,0 +1,172 @@
+@page "/protected"
+@attribute [Authorize]
+@inject IFirebase Firebase
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Protected Page - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h1>Protected Page</h1>
+    <p class="lead">This page requires authentication. You can only see this if you're signed in.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Current User Info</h5>
+                </div>
+                <div class="card-body">
+                    @if (_user != null)
+                    {
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">UID</dt>
+                            <dd class="col-sm-8"><code>@_user.Uid</code></dd>
+
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">@(_user.Email ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">Display Name</dt>
+                            <dd class="col-sm-8">@(_user.DisplayName ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">Email Verified</dt>
+                            <dd class="col-sm-8">
+                                @if (_user.IsEmailVerified)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">No</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Providers</dt>
+                            <dd class="col-sm-8">@(_user.Providers.Any() ? string.Join(", ", _user.Providers) : "N/A")</dd>
+                        </dl>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Claims from Token</h5>
+                </div>
+                <div class="card-body">
+                    @if (_claims.Any())
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Claim Type</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var claim in _claims)
+                                {
+                                    <tr>
+                                        <td><code>@GetShortClaimType(claim.Type)</code></td>
+                                        <td>@claim.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No claims available</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Role-Based Sections</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">These sections demonstrate <code>&lt;AuthorizeView&gt;</code> with role checks.</p>
+
+                    <AuthorizeView Roles="admin">
+                        <Authorized>
+                            <div class="alert alert-success">
+                                <strong>Admin Section:</strong> You have the "admin" role. You can see this content!
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-secondary">
+                                <strong>Admin Section:</strong> You don't have the "admin" role. This content is hidden.
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+
+                    <AuthorizeView Roles="editor">
+                        <Authorized>
+                            <div class="alert alert-info">
+                                <strong>Editor Section:</strong> You have the "editor" role. You can see this content!
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-secondary">
+                                <strong>Editor Section:</strong> You don't have the "editor" role. This content is hidden.
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+
+                    <AuthorizeView Roles="admin,editor">
+                        <Authorized>
+                            <div class="alert alert-warning">
+                                <strong>Admin OR Editor:</strong> You have either "admin" or "editor" role (or both).
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-secondary">
+                                <strong>Admin OR Editor:</strong> You need "admin" or "editor" role to see this.
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6>How to add roles to your Firebase user:</h6>
+                    <p class="mb-2">Use the Firebase Admin SDK or Firebase Console to set custom claims:</p>
+                    <pre class="bg-dark text-light p-3 rounded mb-0"><code>// Using Firebase Admin SDK (Node.js)
+await admin.auth().setCustomUserClaims(uid, {
+  roles: ['admin', 'editor']
+});</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private FirebaseUser? _user;
+    private IEnumerable<System.Security.Claims.Claim> _claims = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = Firebase.Auth.CurrentUser;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _claims = authState.User.Claims;
+    }
+
+    private string GetShortClaimType(string claimType)
+    {
+        // Shorten common claim type URIs
+        var lastSlash = claimType.LastIndexOf('/');
+        return lastSlash >= 0 ? claimType[(lastSlash + 1)..] : claimType;
+    }
+}

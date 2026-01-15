@@ -1,0 +1,351 @@
+@page "/firestore-realtime"
+@inject IFirebase Firebase
+@implements IDisposable
+
+<PageTitle>Firestore Realtime - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firestore Real-time Subscriptions</h2>
+    <p class="text-muted">
+        Watch data update in real-time using <code>OnSnapshot</code>.
+        Open this page in multiple browser tabs to see live sync!
+    </p>
+
+    <div class="row">
+        <!-- Add Message Form -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Send Message</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="_newMessage" OnValidSubmit="SendMessage">
+                        <div class="mb-3">
+                            <label for="author" class="form-label">Your Name</label>
+                            <InputText id="author" class="form-control" @bind-Value="_newMessage.Author" placeholder="Enter your name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="text" class="form-label">Message</label>
+                            <InputTextArea id="text" class="form-control" @bind-Value="_newMessage.Text" rows="2" placeholder="Type a message..." />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_isSending">
+                            @if (_isSending)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Send
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Subscription Status -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Subscription Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge @(_isSubscribed ? "bg-success" : "bg-secondary") me-2">
+                            @(_isSubscribed ? "Connected" : "Disconnected")
+                        </span>
+                        <small class="text-muted">Collection: <code>realtime-messages</code></small>
+                    </div>
+
+                    @if (_isSubscribed)
+                    {
+                        <button class="btn btn-outline-danger btn-sm w-100" @onclick="Unsubscribe">
+                            Stop Listening
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-success btn-sm w-100" @onclick="Subscribe">
+                            Start Listening
+                        </button>
+                    }
+
+                    <hr />
+
+                    <small class="text-muted">
+                        <strong>Updates received:</strong> @_updateCount<br />
+                        <strong>Last update:</strong> @(_lastUpdate?.ToString("HH:mm:ss") ?? "Never")
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Messages -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        Live Messages
+                        @if (_isSubscribed)
+                        {
+                            <span class="badge bg-success ms-2">LIVE</span>
+                        }
+                    </h5>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="ClearAll" disabled="@(!_messages.Any())">
+                        Clear All
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    @if (!_messages.Any())
+                    {
+                        <div class="alert alert-info mb-0">
+                            <p class="mb-0">No messages yet. Send one to get started!</p>
+                            <small class="text-muted">Messages will appear here in real-time.</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var msg in _messages.OrderByDescending(m => m.Data?.Timestamp))
+                            {
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong class="text-primary">@msg.Data?.Author</strong>
+                                            <span class="text-muted ms-2" style="font-size: 0.8em;">
+                                                @FormatTimestamp(msg.Data?.Timestamp)
+                                            </span>
+                                            @if (msg.Metadata?.HasPendingWrites == true)
+                                            {
+                                                <span class="badge bg-warning text-dark ms-1">Pending</span>
+                                            }
+                                            @if (msg.Metadata?.IsFromCache == true)
+                                            {
+                                                <span class="badge bg-secondary ms-1">Cached</span>
+                                            }
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMessage(msg.Id)" title="Delete">
+                                            &times;
+                                        </button>
+                                    </div>
+                                    <p class="mb-0 mt-1">@msg.Data?.Text</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Document Subscription Demo -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Single Document Subscription</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Watch a single document for changes.</p>
+
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" @bind="_watchDocId" placeholder="Enter document ID to watch" />
+                        @if (_isWatchingDoc)
+                        {
+                            <button class="btn btn-outline-danger" @onclick="StopWatchingDocument">
+                                Stop
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-primary" @onclick="WatchDocument" disabled="@string.IsNullOrEmpty(_watchDocId)">
+                                Watch
+                            </button>
+                        }
+                    </div>
+
+                    @if (_watchedDocument != null)
+                    {
+                        <div class="alert @(_watchedDocument.Exists ? "alert-success" : "alert-warning")">
+                            @if (_watchedDocument.Exists)
+                            {
+                                <strong>Document: @_watchedDocument.Id</strong>
+                                <pre class="mb-0 mt-2"><code>@System.Text.Json.JsonSerializer.Serialize(_watchedDocument.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</code></pre>
+                            }
+                            else
+                            {
+                                <strong>Document does not exist</strong>
+                                <p class="mb-0">ID: @_watchedDocument.Id</p>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ChatMessage _newMessage = new() { Author = "Anonymous" };
+    private List<DocumentSnapshot<ChatMessage>> _messages = new();
+    private string? _errorMessage;
+    private bool _isSending;
+    private bool _isSubscribed;
+    private int _updateCount;
+    private DateTime? _lastUpdate;
+    private Action? _unsubscribe;
+
+    // Document subscription
+    private string _watchDocId = "";
+    private bool _isWatchingDoc;
+    private DocumentSnapshot<ChatMessage>? _watchedDocument;
+    private Action? _unsubscribeDoc;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        Subscribe();
+    }
+
+    private void Subscribe()
+    {
+        if (_isSubscribed) return;
+
+        _unsubscribe = Firebase.Firestore
+            .Collection<ChatMessage>("realtime-messages")
+            .OrderByDescending(m => m.Timestamp)
+            .Take(50)
+            .OnSnapshot(
+                onNext: snapshots =>
+                {
+                    _messages = snapshots.ToList();
+                    _updateCount++;
+                    _lastUpdate = DateTime.Now;
+                    InvokeAsync(StateHasChanged);
+                },
+                onError: ex =>
+                {
+                    _errorMessage = $"Subscription error: {ex.Message}";
+                    _isSubscribed = false;
+                    InvokeAsync(StateHasChanged);
+                }
+            );
+
+        _isSubscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        _unsubscribe?.Invoke();
+        _unsubscribe = null;
+        _isSubscribed = false;
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_newMessage.Text)) return;
+
+        _isSending = true;
+        _errorMessage = null;
+
+        _newMessage.Timestamp = DateTime.UtcNow;
+
+        var result = await Firebase.Firestore
+            .Collection<ChatMessage>("realtime-messages")
+            .AddAsync(_newMessage);
+
+        if (result.IsFailure)
+        {
+            _errorMessage = result.Error?.Message;
+        }
+        else
+        {
+            _newMessage = new ChatMessage { Author = _newMessage.Author };
+        }
+
+        _isSending = false;
+    }
+
+    private async Task DeleteMessage(string id)
+    {
+        var result = await Firebase.Firestore
+            .Collection<ChatMessage>("realtime-messages")
+            .Document(id)
+            .DeleteAsync();
+
+        if (result.IsFailure)
+        {
+            _errorMessage = result.Error?.Message;
+        }
+    }
+
+    private async Task ClearAll()
+    {
+        foreach (var msg in _messages.ToList())
+        {
+            await Firebase.Firestore
+                .Collection<ChatMessage>("realtime-messages")
+                .Document(msg.Id)
+                .DeleteAsync();
+        }
+    }
+
+    private void WatchDocument()
+    {
+        if (string.IsNullOrWhiteSpace(_watchDocId)) return;
+
+        StopWatchingDocument();
+
+        _unsubscribeDoc = Firebase.Firestore
+            .Collection<ChatMessage>("realtime-messages")
+            .Document(_watchDocId)
+            .OnSnapshot(
+                onNext: snapshot =>
+                {
+                    _watchedDocument = snapshot;
+                    InvokeAsync(StateHasChanged);
+                },
+                onError: ex =>
+                {
+                    _errorMessage = $"Document watch error: {ex.Message}";
+                    InvokeAsync(StateHasChanged);
+                }
+            );
+
+        _isWatchingDoc = true;
+    }
+
+    private void StopWatchingDocument()
+    {
+        _unsubscribeDoc?.Invoke();
+        _unsubscribeDoc = null;
+        _isWatchingDoc = false;
+        _watchedDocument = null;
+    }
+
+    private string FormatTimestamp(DateTime? timestamp)
+    {
+        if (timestamp == null) return "";
+        var local = timestamp.Value.ToLocalTime();
+        var now = DateTime.Now;
+
+        if (local.Date == now.Date)
+            return local.ToString("HH:mm:ss");
+
+        return local.ToString("MMM dd, HH:mm");
+    }
+
+    public void Dispose()
+    {
+        Unsubscribe();
+        StopWatchingDocument();
+    }
+
+    public class ChatMessage
+    {
+        public string Author { get; set; } = "";
+        public string Text { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+}

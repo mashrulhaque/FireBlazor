@@ -1,0 +1,522 @@
+@page "/fieldvalues"
+@inject IFirebase Firebase
+
+<PageTitle>Field Values - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>FieldValue Operations</h2>
+    <p class="text-muted">Demonstrate Firestore FieldValue sentinels: ServerTimestamp, Increment, ArrayUnion, ArrayRemove, and Delete.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    @if (_isLoading && _demo is null && !_hasCorruptedData)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading demo document...</p>
+        </div>
+    }
+    else if (_hasCorruptedData)
+    {
+        <div class="alert alert-warning">
+            <h5>Corrupted Data Detected</h5>
+            <p>The demo document contains corrupted data from a previous version. This can happen when FieldValue sentinels were stored as objects instead of being transformed.</p>
+            <button class="btn btn-danger" @onclick="DeleteCorruptedDocument" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Delete Corrupted Document
+            </button>
+        </div>
+    }
+    else if (_demo is null)
+    {
+        <div class="alert alert-info">
+            <h5>No Demo Document</h5>
+            <p>Create a demo document to start testing FieldValue operations.</p>
+            <button class="btn btn-primary" @onclick="CreateDemo" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Create Demo Document
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- View Counter Section -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">View Counter (Increment)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <span class="display-1 text-primary">@_demo.ViewCount</span>
+                            <p class="text-muted">views</p>
+                        </div>
+                        <p class="small text-muted">
+                            Uses <code>FieldValue.Increment(1)</code> to atomically increment the counter.
+                        </p>
+                        <button class="btn btn-primary w-100" @onclick="IncrementViewCount" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Increment View Count
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Timestamp Section -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Last Viewed (ServerTimestamp)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            @if (_demo.LastViewed.HasValue)
+                            {
+                                <span class="h4 text-success">@_demo.LastViewed.Value.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                            }
+                            else
+                            {
+                                <span class="h4 text-muted">Not set</span>
+                            }
+                        </div>
+                        <p class="small text-muted">
+                            Uses <code>FieldValue.ServerTimestamp()</code> to set the server's current timestamp.
+                        </p>
+                        <button class="btn btn-success w-100" @onclick="UpdateTimestamp" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Update Timestamp
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags Array Section -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Tags (ArrayUnion / ArrayRemove)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            @if (_demo.Tags.Count == 0)
+                            {
+                                <span class="text-muted">No tags added yet</span>
+                            }
+                            else
+                            {
+                                @foreach (var tag in _demo.Tags)
+                                {
+                                    <span class="badge bg-info me-1 mb-1">
+                                        @tag
+                                        <button type="button" class="btn-close btn-close-white ms-1"
+                                                style="font-size: 0.6em;"
+                                                @onclick="() => RemoveTag(tag)"
+                                                disabled="@_isLoading"></button>
+                                    </span>
+                                }
+                            }
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Enter tag name"
+                                   @bind="_newTag" @bind:event="oninput"
+                                   @onkeypress="HandleTagKeyPress" />
+                            <button class="btn btn-outline-primary" type="button"
+                                    @onclick="AddTag" disabled="@(_isLoading || string.IsNullOrWhiteSpace(_newTag))">
+                                Add Tag
+                            </button>
+                        </div>
+                        <p class="small text-muted">
+                            Uses <code>FieldValue.ArrayUnion()</code> to add tags and <code>FieldValue.ArrayRemove()</code> to remove them.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional Note Section -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Optional Note (Delete Field)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            @if (!string.IsNullOrEmpty(_demo.OptionalNote))
+                            {
+                                <div class="alert alert-secondary">
+                                    <strong>Current Note:</strong> @_demo.OptionalNote
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-light">
+                                    <em>No note set</em>
+                                </div>
+                            }
+                        </div>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Enter a note"
+                                   @bind="_newNote" />
+                            <button class="btn btn-outline-primary" type="button"
+                                    @onclick="SetNote" disabled="@(_isLoading || string.IsNullOrWhiteSpace(_newNote))">
+                                Set Note
+                            </button>
+                        </div>
+                        <button class="btn btn-outline-danger w-100" @onclick="DeleteNote"
+                                disabled="@(_isLoading || string.IsNullOrEmpty(_demo.OptionalNote))">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Delete Note Field
+                        </button>
+                        <p class="small text-muted mt-2">
+                            Uses <code>FieldValue.Delete()</code> to completely remove the field from the document.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="mt-4 text-center">
+            <button class="btn btn-outline-secondary" @onclick="ResetDemo" disabled="@_isLoading">
+                Reset Demo Data
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private const string DemoDocId = "fieldvalue-demo";
+    private FieldValueDemo? _demo;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isLoading;
+    private bool _hasCorruptedData;
+    private string _newTag = "";
+    private string _newNote = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadOrCreateDemo();
+    }
+
+    private async Task LoadOrCreateDemo()
+    {
+        _isLoading = true;
+        _hasCorruptedData = false;
+
+        try
+        {
+            var result = await Firebase.Firestore
+                .Collection<FieldValueDemo>("fieldvalue-demos")
+                .Document(DemoDocId)
+                .GetAsync();
+
+            if (result.IsSuccess && result.Value.Exists && result.Value.Data is not null)
+            {
+                _demo = result.Value.Data;
+            }
+            else if (result.IsSuccess && !result.Value.Exists)
+            {
+                // No document exists yet
+                _demo = null;
+            }
+            else
+            {
+                _errorMessage = result.Error?.Message ?? "Failed to load document";
+            }
+        }
+        catch (Exception ex) when (ex.Message.Contains("JSON") || ex.Message.Contains("Cannot get the value"))
+        {
+            // Document has corrupted data from old implementation
+            _hasCorruptedData = true;
+            _errorMessage = "Document has corrupted data. Please delete and recreate it.";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task CreateDemo()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        _demo = new FieldValueDemo
+        {
+            ViewCount = 0,
+            LastViewed = null,
+            Tags = new List<string>(),
+            OptionalNote = null
+        };
+
+        var setResult = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .SetAsync(_demo);
+
+        if (!setResult.IsSuccess)
+        {
+            _errorMessage = setResult.Error?.Message ?? "Failed to create demo document";
+            _demo = null;
+        }
+        else
+        {
+            _successMessage = "Demo document created!";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteCorruptedDocument()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .DeleteAsync();
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Corrupted document deleted. You can now create a new one.";
+            _hasCorruptedData = false;
+            _demo = null;
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to delete document";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task IncrementViewCount()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { ViewCount = FieldValue.Increment(1) });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "View count incremented!";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to increment view count";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task UpdateTimestamp()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { LastViewed = FieldValue.ServerTimestamp() });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Timestamp updated to server time!";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to update timestamp";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task HandleTagKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newTag))
+        {
+            await AddTag();
+        }
+    }
+
+    private async Task AddTag()
+    {
+        if (string.IsNullOrWhiteSpace(_newTag)) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { Tags = FieldValue.ArrayUnion(_newTag.Trim()) });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Tag '{_newTag.Trim()}' added!";
+            _newTag = "";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to add tag";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task RemoveTag(string tag)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { Tags = FieldValue.ArrayRemove(tag) });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Tag '{tag}' removed!";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to remove tag";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task SetNote()
+    {
+        if (string.IsNullOrWhiteSpace(_newNote)) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { OptionalNote = _newNote.Trim() });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Note set!";
+            _newNote = "";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to set note";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteNote()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .UpdateAsync(new { OptionalNote = FieldValue.Delete() });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Note field deleted!";
+            await LoadOrCreateDemo();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to delete note";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task ResetDemo()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var resetData = new FieldValueDemo
+        {
+            ViewCount = 0,
+            LastViewed = null,
+            Tags = new List<string>(),
+            OptionalNote = null
+        };
+
+        var result = await Firebase.Firestore
+            .Collection<FieldValueDemo>("fieldvalue-demos")
+            .Document(DemoDocId)
+            .SetAsync(resetData);
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Demo data reset!";
+            _demo = resetData;
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to reset demo";
+        }
+
+        _isLoading = false;
+    }
+
+    public class FieldValueDemo
+    {
+        public int ViewCount { get; set; }
+        public DateTime? LastViewed { get; set; }
+        public List<string> Tags { get; set; } = [];
+        public string? OptionalNote { get; set; }
+    }
+}

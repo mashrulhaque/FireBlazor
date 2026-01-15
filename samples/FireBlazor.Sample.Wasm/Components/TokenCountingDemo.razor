@@ -1,0 +1,129 @@
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Token Counter</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Count tokens before sending to estimate usage and costs.</p>
+
+                <div class="mb-3">
+                    <label for="tokenText" class="form-label">Text to Count</label>
+                    <textarea id="tokenText" class="form-control" rows="4" @bind="_textToCount"
+                              placeholder="Enter text to count tokens..."></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="CountTokensAsync" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Count Tokens
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Results</h5>
+            </div>
+            <div class="card-body">
+                @if (_tokenCount != null)
+                {
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Total Tokens</strong></td>
+                                <td class="text-end">@_tokenCount.TotalTokens</td>
+                            </tr>
+                            @if (_tokenCount.TextTokens.HasValue)
+                            {
+                                <tr>
+                                    <td>Text Tokens</td>
+                                    <td class="text-end">@_tokenCount.TextTokens</td>
+                                </tr>
+                            }
+                            @if (_tokenCount.ImageTokens.HasValue)
+                            {
+                                <tr>
+                                    <td>Image Tokens</td>
+                                    <td class="text-end">@_tokenCount.ImageTokens</td>
+                                </tr>
+                            }
+                            @if (_tokenCount.AudioTokens.HasValue)
+                            {
+                                <tr>
+                                    <td>Audio Tokens</td>
+                                    <td class="text-end">@_tokenCount.AudioTokens</td>
+                                </tr>
+                            }
+                            @if (_tokenCount.VideoTokens.HasValue)
+                            {
+                                <tr>
+                                    <td>Video Tokens</td>
+                                    <td class="text-end">@_tokenCount.VideoTokens</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Token count will appear here...</p>
+                }
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger mt-3 mb-0">@_error</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required IFirebase Firebase { get; set; }
+
+    private string _textToCount = "Hello, how are you today? This is a test message to count tokens.";
+    private TokenCount? _tokenCount;
+    private bool _isLoading;
+    private string? _error;
+
+    private async Task CountTokensAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_textToCount))
+        {
+            _error = "Please enter some text";
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        _tokenCount = null;
+
+        try
+        {
+            var model = Firebase.AI.GetModel("gemini-2.0-flash");
+            var result = await model.CountTokensAsync(_textToCount);
+
+            if (result.IsSuccess)
+            {
+                _tokenCount = result.Value;
+            }
+            else
+            {
+                _error = result.Error?.Message ?? "Failed to count tokens";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,834 @@
+@page "/realtime"
+@using FireBlazor
+@inject IFirebase Firebase
+@implements IDisposable
+
+<PageTitle>Realtime Database - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Realtime Database Demo</h2>
+    <p class="text-muted">Real-time data synchronization with Firebase Realtime Database.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Add Message</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="_newMessage" OnValidSubmit="SendMessage">
+                        <div class="mb-3">
+                            <label for="author" class="form-label">Your Name</label>
+                            <InputText id="author" class="form-control" @bind-Value="_newMessage.Author" placeholder="Enter your name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="text" class="form-label">Message</label>
+                            <InputTextArea id="text" class="form-control" @bind-Value="_newMessage.Text" rows="2" placeholder="Type your message..." />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_isSending">
+                            @if (_isSending)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Send Message
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Connection Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <span class="badge @(_isListening ? "bg-success" : "bg-secondary") me-2">
+                            @(_isListening ? "Connected" : "Disconnected")
+                        </span>
+                        <span class="text-muted">Real-time listener is @(_isListening ? "active" : "inactive")</span>
+                    </div>
+
+                    <div class="mt-3">
+                        @if (_isListening)
+                        {
+                            <button class="btn btn-outline-danger btn-sm" @onclick="StopListening">
+                                Stop Listening
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-success btn-sm" @onclick="StartListening">
+                                Start Listening
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        Messages
+                        @if (_isListening)
+                        {
+                            <span class="badge bg-success ms-2">Live</span>
+                        }
+                    </h5>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="ClearMessages" disabled="@(_messages.Count == 0)">
+                        Clear All
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    @if (_messages.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            No messages yet. Send the first one!
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var msg in _messages.OrderByDescending(m => m.Timestamp))
+                            {
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong class="text-primary">@msg.Author</strong>
+                                            <p class="mb-1">@msg.Text</p>
+                                            <small class="text-muted">@FormatTimestamp(msg.Timestamp)</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMessage(msg.Key!)">
+                                            &times;
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Features Section -->
+    <h3 class="mt-5 mb-4">Advanced Features</h3>
+
+    <div class="row">
+        <!-- Connection State Monitoring -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Connection State Monitoring</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Monitor real-time connection state to the Firebase server.</p>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge @(_isServerConnected ? "bg-success" : "bg-danger") me-2" style="font-size: 1rem;">
+                            @(_isServerConnected ? "Connected" : "Disconnected")
+                        </span>
+                        <span class="text-muted">Firebase server connection</span>
+                    </div>
+
+                    <div class="btn-group w-100">
+                        <button class="btn btn-outline-danger" @onclick="GoOffline" disabled="@(!_isServerConnected)">
+                            Go Offline
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="GoOnline" disabled="@_isServerConnected">
+                            Go Online
+                        </button>
+                    </div>
+
+                    <div class="mt-3">
+                        <pre class="bg-dark text-light p-2 rounded small mb-0"><code>// Subscribe to connection state
+_unsubscribe = Firebase.RealtimeDb
+    .OnConnectionStateChanged(isConnected => {
+        _isConnected = isConnected;
+        InvokeAsync(StateHasChanged);
+    });</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Timestamp -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Server Timestamp</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Use server-side timestamps for consistent time across clients.</p>
+
+                    @if (_timestampedMessage is not null)
+                    {
+                        <div class="alert alert-success">
+                            <strong>Last timestamped message:</strong><br />
+                            "@_timestampedMessage.Text" - @FormatTimestamp(_timestampedMessage.ServerTime)
+                        </div>
+                    }
+
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" @bind="_serverTimestampText"
+                               placeholder="Enter message..." />
+                        <button class="btn btn-primary" @onclick="SendTimestampedMessage" disabled="@_isSendingTimestamp">
+                            @if (_isSendingTimestamp)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <span>Send with Timestamp</span>
+                            }
+                        </button>
+                    </div>
+
+                    <pre class="bg-dark text-light p-2 rounded small mb-0"><code>// Server assigns the timestamp
+var message = new {
+    text = "Hello!",
+    createdAt = ServerValue.Timestamp
+};
+await Firebase.RealtimeDb
+    .Ref("messages").PushAsync(message);</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <!-- Atomic Counter -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Atomic Counter (ServerValue.Increment)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Increment or decrement values atomically without reading first.</p>
+
+                    <div class="text-center mb-3">
+                        <div class="display-4">@_counterValue</div>
+                        <span class="text-muted">Counter Value</span>
+                    </div>
+
+                    <div class="btn-group w-100 mb-3">
+                        <button class="btn btn-danger" @onclick="() => IncrementCounter(-10)">-10</button>
+                        <button class="btn btn-outline-danger" @onclick="() => IncrementCounter(-1)">-1</button>
+                        <button class="btn btn-outline-success" @onclick="() => IncrementCounter(1)">+1</button>
+                        <button class="btn btn-success" @onclick="() => IncrementCounter(10)">+10</button>
+                    </div>
+
+                    <button class="btn btn-outline-secondary w-100 mb-3" @onclick="ResetCounter">
+                        Reset to 0
+                    </button>
+
+                    <pre class="bg-dark text-light p-2 rounded small mb-0"><code>// Atomic increment - no read needed!
+await Firebase.RealtimeDb
+    .Ref("counter/value")
+    .SetAsync(ServerValue.Increment(1));</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Example -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Transaction (Read-Modify-Write)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Perform atomic read-modify-write operations with transactions.</p>
+
+                    <div class="text-center mb-3">
+                        <div class="display-4">@_transactionCounter</div>
+                        <span class="text-muted">Transaction Counter</span>
+                    </div>
+
+                    @if (_lastTransactionResult is not null)
+                    {
+                        <div class="alert @(_lastTransactionResult.StartsWith("Success") ? "alert-success" : "alert-info") small">
+                            @_lastTransactionResult
+                        </div>
+                    }
+
+                    <div class="btn-group w-100 mb-3">
+                        <button class="btn btn-primary" @onclick="IncrementWithTransaction" disabled="@_isTransacting">
+                            @if (_isTransacting)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <span>Increment via Transaction</span>
+                            }
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="ResetTransactionCounter">
+                            Reset
+                        </button>
+                    </div>
+
+                    <pre class="bg-dark text-light p-2 rounded small mb-0"><code>// Transaction - read, modify, write atomically
+var result = await Firebase.RealtimeDb
+    .Ref("txCounter/value")
+    .TransactionAsync&lt;int&gt;(current =>
+        (current ?? 0) + 1
+    );</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <!-- Presence (OnDisconnect) -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Presence (OnDisconnect)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Automatically update status when a client disconnects using OnDisconnect handlers.</p>
+
+                    <div class="text-center mb-3">
+                        <div class="mb-2">
+                            <span class="badge @(_presenceStatus == "online" ? "bg-success" : _presenceStatus == "offline" ? "bg-secondary" : "bg-warning") fs-5 px-4 py-2">
+                                @(_presenceStatus ?? "unknown")
+                            </span>
+                        </div>
+                        <span class="text-muted small">User ID: @_presenceUserId</span>
+                        @if (_presenceLastSeen.HasValue)
+                        {
+                            <br />
+                            <span class="text-muted small">Last seen: @FormatTimestamp(_presenceLastSeen.Value)</span>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_presenceError))
+                    {
+                        <div class="alert alert-danger small py-2">@_presenceError</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_presenceMessage))
+                    {
+                        <div class="alert alert-info small py-2">@_presenceMessage</div>
+                    }
+
+                    <div class="btn-group w-100 mb-2">
+                        <button class="btn btn-success" @onclick="SetupPresence" disabled="@(_presenceStatus == "online" || _isSettingPresence)">
+                            @if (_isSettingPresence)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <span>Go Online</span>
+                            }
+                        </button>
+                        <button class="btn btn-secondary" @onclick="SimulateDisconnect" disabled="@(_presenceStatus != "online")">
+                            Simulate Disconnect
+                        </button>
+                    </div>
+
+                    <div class="btn-group w-100 mb-3">
+                        <button class="btn btn-outline-warning" @onclick="CancelPresenceDisconnect" disabled="@(_presenceStatus != "online")">
+                            Cancel OnDisconnect
+                        </button>
+                        <button class="btn btn-outline-danger" @onclick="RemovePresence">
+                            Remove Presence
+                        </button>
+                    </div>
+
+                    <pre class="bg-dark text-light p-2 rounded small mb-0"><code>// Set online status
+await Firebase.RealtimeDb
+    .Ref($"presence/{userId}")
+    .SetAsync(new { status = "online" });
+
+// Auto-set offline on disconnect
+await Firebase.RealtimeDb
+    .Ref($"presence/{userId}")
+    .OnDisconnect()
+    .SetAsync(new {
+        status = "offline",
+        lastSeen = ServerValue.Timestamp
+    });
+
+// Cancel pending disconnect
+await Firebase.RealtimeDb
+    .Ref($"presence/{userId}")
+    .OnDisconnect()
+    .CancelAsync();</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ChatMessage _newMessage = new() { Author = "Anonymous" };
+    private List<ChatMessage> _messages = new();
+    private string? _errorMessage;
+    private bool _isSending;
+    private bool _isListening;
+    private Action? _unsubscribe;
+
+    // Advanced features state
+    private bool _isServerConnected;
+    private Action? _unsubscribeConnection;
+    private string _serverTimestampText = "";
+    private TimestampedMessage? _timestampedMessage;
+    private bool _isSendingTimestamp;
+    private int _counterValue;
+    private Action? _unsubscribeCounter;
+    private int _transactionCounter;
+    private Action? _unsubscribeTransactionCounter;
+    private string? _lastTransactionResult;
+    private bool _isTransacting;
+
+    // Presence (OnDisconnect) state
+    private string _presenceUserId = Guid.NewGuid().ToString("N")[..8];
+    private string? _presenceStatus;
+    private long? _presenceLastSeen;
+    private Action? _unsubscribePresence;
+    private bool _isSettingPresence;
+    private string? _presenceError;
+    private string? _presenceMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadMessages();
+        StartListening();
+        StartConnectionMonitoring();
+        StartCounterListening();
+        StartTransactionCounterListening();
+        StartPresenceListening();
+    }
+
+    private async Task LoadMessages()
+    {
+        var result = await Firebase.RealtimeDb
+            .Ref("messages")
+            .LimitToLast(50)
+            .GetAsync<Dictionary<string, ChatMessage>>();
+
+        if (result.IsSuccess)
+        {
+            var snapshot = result.Value;
+            if (snapshot.Exists && snapshot.Value is not null)
+            {
+                _messages = snapshot.Value
+                    .Select(kvp =>
+                    {
+                        var msg = kvp.Value;
+                        msg.Key = kvp.Key;
+                        return msg;
+                    })
+                    .ToList();
+            }
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+    }
+
+    private void StartListening()
+    {
+        if (_isListening) return;
+
+        _unsubscribe = Firebase.RealtimeDb
+            .Ref("messages")
+            .OrderByChild("timestamp")
+            .LimitToLast(50)
+            .OnValue<Dictionary<string, ChatMessage>>(snapshot =>
+            {
+                if (snapshot.Exists && snapshot.Value is not null)
+                {
+                    _messages = snapshot.Value
+                        .Select(kvp =>
+                        {
+                            var msg = kvp.Value;
+                            msg.Key = kvp.Key;
+                            return msg;
+                        })
+                        .ToList();
+                }
+                else
+                {
+                    _messages.Clear();
+                }
+                InvokeAsync(StateHasChanged);
+            },
+            error =>
+            {
+                _errorMessage = error.Message;
+                InvokeAsync(StateHasChanged);
+            });
+
+        _isListening = true;
+    }
+
+    private void StopListening()
+    {
+        _unsubscribe?.Invoke();
+        _unsubscribe = null;
+        _isListening = false;
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_newMessage.Text)) return;
+
+        _isSending = true;
+        _errorMessage = null;
+
+        _newMessage.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        var result = await Firebase.RealtimeDb
+            .Ref("messages")
+            .PushAsync(_newMessage);
+
+        if (result.IsSuccess)
+        {
+            _newMessage = new ChatMessage { Author = _newMessage.Author };
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isSending = false;
+    }
+
+    private async Task DeleteMessage(string key)
+    {
+        var result = await Firebase.RealtimeDb
+            .Ref($"messages/{key}")
+            .RemoveAsync();
+
+        if (result.IsFailure)
+        {
+            _errorMessage = result.Error?.Message;
+        }
+    }
+
+    private async Task ClearMessages()
+    {
+        var result = await Firebase.RealtimeDb
+            .Ref("messages")
+            .RemoveAsync();
+
+        if (result.IsSuccess)
+        {
+            _messages.Clear();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+    }
+
+    private static string FormatTimestamp(long timestamp)
+    {
+        var dt = DateTimeOffset.FromUnixTimeMilliseconds(timestamp);
+        return dt.LocalDateTime.ToString("MMM d, h:mm tt");
+    }
+
+    // Connection State Monitoring
+    private void StartConnectionMonitoring()
+    {
+        _unsubscribeConnection = Firebase.RealtimeDb.OnConnectionStateChanged(isConnected =>
+        {
+            _isServerConnected = isConnected;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task GoOffline()
+    {
+        await Firebase.RealtimeDb.GoOfflineAsync();
+    }
+
+    private async Task GoOnline()
+    {
+        await Firebase.RealtimeDb.GoOnlineAsync();
+    }
+
+    // Server Timestamp
+    private async Task SendTimestampedMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_serverTimestampText)) return;
+
+        _isSendingTimestamp = true;
+
+        var message = new
+        {
+            text = _serverTimestampText,
+            createdAt = ServerValue.Timestamp
+        };
+
+        var result = await Firebase.RealtimeDb
+            .Ref("timestamped_messages")
+            .PushAsync(message);
+
+        if (result.IsSuccess)
+        {
+            // Read back the message to get the server timestamp
+            var readResult = await Firebase.RealtimeDb
+                .Ref($"timestamped_messages/{result.Value.Key}")
+                .GetAsync<TimestampedMessage>();
+
+            if (readResult.IsSuccess && readResult.Value.Exists)
+            {
+                _timestampedMessage = readResult.Value.Value;
+            }
+            _serverTimestampText = "";
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isSendingTimestamp = false;
+    }
+
+    // Atomic Counter
+    private void StartCounterListening()
+    {
+        _unsubscribeCounter = Firebase.RealtimeDb
+            .Ref("demo_counter/value")
+            .OnValue<int>(snapshot =>
+            {
+                _counterValue = snapshot.Exists ? snapshot.Value : 0;
+                InvokeAsync(StateHasChanged);
+            },
+            error =>
+            {
+                _errorMessage = error.Message;
+                InvokeAsync(StateHasChanged);
+            });
+    }
+
+    private async Task IncrementCounter(int delta)
+    {
+        await Firebase.RealtimeDb
+            .Ref("demo_counter/value")
+            .SetAsync(ServerValue.Increment(delta));
+    }
+
+    private async Task ResetCounter()
+    {
+        await Firebase.RealtimeDb
+            .Ref("demo_counter/value")
+            .SetAsync(0);
+    }
+
+    // Transaction Counter
+    private void StartTransactionCounterListening()
+    {
+        _unsubscribeTransactionCounter = Firebase.RealtimeDb
+            .Ref("demo_tx_counter/value")
+            .OnValue<int>(snapshot =>
+            {
+                _transactionCounter = snapshot.Exists ? snapshot.Value : 0;
+                InvokeAsync(StateHasChanged);
+            },
+            error =>
+            {
+                _errorMessage = error.Message;
+                InvokeAsync(StateHasChanged);
+            });
+    }
+
+    private async Task IncrementWithTransaction()
+    {
+        _isTransacting = true;
+        _lastTransactionResult = null;
+
+        var result = await Firebase.RealtimeDb
+            .Ref("demo_tx_counter/value")
+            .TransactionAsync<int?>(current => (current ?? 0) + 1);
+
+        if (result.IsSuccess)
+        {
+            _lastTransactionResult = $"Success! Committed: {result.Value.Committed}, New value: {result.Value.Value}";
+        }
+        else
+        {
+            _lastTransactionResult = $"Error: {result.Error?.Message}";
+        }
+
+        _isTransacting = false;
+    }
+
+    private async Task ResetTransactionCounter()
+    {
+        await Firebase.RealtimeDb
+            .Ref("demo_tx_counter/value")
+            .SetAsync(0);
+        _lastTransactionResult = null;
+    }
+
+    // Presence (OnDisconnect) methods
+    private void StartPresenceListening()
+    {
+        _unsubscribePresence = Firebase.RealtimeDb
+            .Ref($"presence/{_presenceUserId}")
+            .OnValue<PresenceData>(snapshot =>
+            {
+                if (snapshot.Exists && snapshot.Value is not null)
+                {
+                    _presenceStatus = snapshot.Value.Status;
+                    _presenceLastSeen = snapshot.Value.LastSeen;
+                }
+                else
+                {
+                    _presenceStatus = null;
+                    _presenceLastSeen = null;
+                }
+                InvokeAsync(StateHasChanged);
+            },
+            error =>
+            {
+                _presenceError = error.Message;
+                InvokeAsync(StateHasChanged);
+            });
+    }
+
+    private async Task SetupPresence()
+    {
+        _isSettingPresence = true;
+        _presenceError = null;
+        _presenceMessage = null;
+
+        try
+        {
+            // Set online status
+            var setResult = await Firebase.RealtimeDb
+                .Ref($"presence/{_presenceUserId}")
+                .SetAsync(new { status = "online" });
+
+            if (setResult.IsFailure)
+            {
+                _presenceError = setResult.Error?.Message;
+                return;
+            }
+
+            // Set up OnDisconnect to automatically mark offline
+            var disconnectResult = await Firebase.RealtimeDb
+                .Ref($"presence/{_presenceUserId}")
+                .OnDisconnect()
+                .SetAsync(new
+                {
+                    status = "offline",
+                    lastSeen = ServerValue.Timestamp
+                });
+
+            if (disconnectResult.IsFailure)
+            {
+                _presenceError = disconnectResult.Error?.Message;
+                return;
+            }
+
+            _presenceMessage = "Online! OnDisconnect handler is set. Disconnect to see automatic offline status.";
+        }
+        finally
+        {
+            _isSettingPresence = false;
+        }
+    }
+
+    private async Task SimulateDisconnect()
+    {
+        _presenceMessage = "Simulating disconnect via GoOffline...";
+        await Firebase.RealtimeDb.GoOfflineAsync();
+
+        // Wait a moment then reconnect
+        await Task.Delay(2000);
+        await Firebase.RealtimeDb.GoOnlineAsync();
+        _presenceMessage = "Reconnected. Check if OnDisconnect triggered the offline status.";
+    }
+
+    private async Task CancelPresenceDisconnect()
+    {
+        _presenceError = null;
+
+        var result = await Firebase.RealtimeDb
+            .Ref($"presence/{_presenceUserId}")
+            .OnDisconnect()
+            .CancelAsync();
+
+        if (result.IsSuccess)
+        {
+            _presenceMessage = "OnDisconnect handler cancelled. Disconnect will no longer auto-update status.";
+        }
+        else
+        {
+            _presenceError = result.Error?.Message;
+        }
+    }
+
+    private async Task RemovePresence()
+    {
+        _presenceError = null;
+        _presenceMessage = null;
+
+        // Cancel any pending OnDisconnect first
+        await Firebase.RealtimeDb
+            .Ref($"presence/{_presenceUserId}")
+            .OnDisconnect()
+            .CancelAsync();
+
+        // Remove the presence data
+        var result = await Firebase.RealtimeDb
+            .Ref($"presence/{_presenceUserId}")
+            .RemoveAsync();
+
+        if (result.IsFailure)
+        {
+            _presenceError = result.Error?.Message;
+        }
+    }
+
+    public void Dispose()
+    {
+        StopListening();
+        _unsubscribeConnection?.Invoke();
+        _unsubscribeCounter?.Invoke();
+        _unsubscribeTransactionCounter?.Invoke();
+        _unsubscribePresence?.Invoke();
+    }
+
+    public class ChatMessage
+    {
+        public string? Key { get; set; }
+        public string Author { get; set; } = "";
+        public string Text { get; set; } = "";
+        public long Timestamp { get; set; }
+    }
+
+    public class TimestampedMessage
+    {
+        public string Text { get; set; } = "";
+        public long CreatedAt { get; set; }
+
+        // Alias for display
+        public long ServerTime => CreatedAt;
+    }
+
+    public class PresenceData
+    {
+        public string? Status { get; set; }
+        public long? LastSeen { get; set; }
+    }
+}

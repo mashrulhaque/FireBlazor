@@ -1,0 +1,270 @@
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Function Calling</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    AI can call functions you define. Try asking about weather or calculations.
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label">Available Functions</label>
+                    <div class="list-group list-group-flush small">
+                        <div class="list-group-item px-0">
+                            <strong>getWeather(city)</strong> - Get weather for a city
+                        </div>
+                        <div class="list-group-item px-0">
+                            <strong>calculate(expression)</strong> - Evaluate math expression
+                        </div>
+                        <div class="list-group-item px-0">
+                            <strong>getCurrentTime(timezone)</strong> - Get current time
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="functionPrompt" class="form-label">Your Request</label>
+                    <textarea id="functionPrompt" class="form-control" rows="2" @bind="_prompt"
+                              placeholder="e.g., What's the weather in Tokyo?"></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="GenerateWithFunctionsAsync" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Send Request
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Response</h5>
+            </div>
+            <div class="card-body">
+                @if (_steps.Count > 0)
+                {
+                    @foreach (var step in _steps)
+                    {
+                        <div class="mb-3 p-2 border rounded @step.CssClass">
+                            <strong class="small text-uppercase">@step.Type</strong>
+                            <div style="white-space: pre-wrap;">@step.Content</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Function calls and responses will appear here...</p>
+                }
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger mt-3 mb-0">@_error</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required IFirebase Firebase { get; set; }
+
+    private string _prompt = "What's the weather like in Tokyo and what is 15 * 7?";
+    private List<ResponseStep> _steps = new();
+    private bool _isLoading;
+    private string? _error;
+
+    private record ResponseStep(string Type, string Content, string CssClass);
+
+    private async Task GenerateWithFunctionsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _error = "Please enter a request";
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        _steps.Clear();
+
+        try
+        {
+            var tools = new List<Tool>
+            {
+                new Tool
+                {
+                    FunctionDeclarations = new List<FunctionDeclaration>
+                    {
+                        new FunctionDeclaration
+                        {
+                            Name = "getWeather",
+                            Description = "Get the current weather for a city",
+                            Parameters = new FunctionParameters
+                            {
+                                Type = "object",
+                                Properties = new Dictionary<string, ParameterSchema>
+                                {
+                                    ["city"] = new ParameterSchema
+                                    {
+                                        Type = "string",
+                                        Description = "The city name"
+                                    }
+                                },
+                                Required = new List<string> { "city" }
+                            }
+                        },
+                        new FunctionDeclaration
+                        {
+                            Name = "calculate",
+                            Description = "Evaluate a mathematical expression",
+                            Parameters = new FunctionParameters
+                            {
+                                Type = "object",
+                                Properties = new Dictionary<string, ParameterSchema>
+                                {
+                                    ["expression"] = new ParameterSchema
+                                    {
+                                        Type = "string",
+                                        Description = "The math expression to evaluate"
+                                    }
+                                },
+                                Required = new List<string> { "expression" }
+                            }
+                        },
+                        new FunctionDeclaration
+                        {
+                            Name = "getCurrentTime",
+                            Description = "Get the current time in a timezone",
+                            Parameters = new FunctionParameters
+                            {
+                                Type = "object",
+                                Properties = new Dictionary<string, ParameterSchema>
+                                {
+                                    ["timezone"] = new ParameterSchema
+                                    {
+                                        Type = "string",
+                                        Description = "The timezone (e.g., UTC, America/New_York)"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            var config = new GenerationConfig
+            {
+                Tools = tools
+            };
+
+            var model = Firebase.AI.GetModel("gemini-2.0-flash", config);
+            var result = await model.GenerateContentAsync(_prompt);
+
+            if (result.IsSuccess)
+            {
+                var response = result.Value;
+
+                if (response.HasFunctionCalls)
+                {
+                    var functionResponses = new List<FunctionResponse>();
+
+                    foreach (var call in response.FunctionCalls!)
+                    {
+                        var args = call.GetAllArguments();
+                        _steps.Add(new ResponseStep(
+                            "Function Call",
+                            $"{call.Name}({string.Join(", ", args.Select(a => $"{a.Key}: {a.Value}"))})",
+                            "bg-light border-primary"
+                        ));
+
+                        var funcResult = ExecuteFunction(call);
+                        functionResponses.Add(funcResult);
+
+                        _steps.Add(new ResponseStep(
+                            "Function Result",
+                            funcResult.Response?.ToString() ?? "null",
+                            "bg-success bg-opacity-10 border-success"
+                        ));
+                    }
+
+                    StateHasChanged();
+
+                    // Send function results back to get final response
+                    // Note: This would require multi-turn which needs chat session
+                    _steps.Add(new ResponseStep(
+                        "Note",
+                        "Full multi-turn function calling requires a chat session to send results back.",
+                        "bg-info bg-opacity-10 border-info"
+                    ));
+                }
+                else if (!string.IsNullOrEmpty(response.Text))
+                {
+                    _steps.Add(new ResponseStep("AI Response", response.Text, "bg-light"));
+                }
+            }
+            else
+            {
+                _error = result.Error?.Message ?? "Generation failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private FunctionResponse ExecuteFunction(FunctionCall call)
+    {
+        object? result = call.Name switch
+        {
+            "getWeather" => new
+            {
+                city = call.GetArgument<string>("city"),
+                temperature = "22°C",
+                condition = "Partly Cloudy",
+                humidity = "65%"
+            },
+            "calculate" => new
+            {
+                expression = call.GetArgument<string>("expression"),
+                result = EvaluateExpression(call.GetArgument<string>("expression") ?? "0")
+            },
+            "getCurrentTime" => new
+            {
+                timezone = call.GetArgument<string>("timezone") ?? "UTC",
+                time = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC"
+            },
+            _ => new { error = "Unknown function" }
+        };
+
+        return new FunctionResponse
+        {
+            Name = call.Name,
+            Response = result
+        };
+    }
+
+    private string EvaluateExpression(string expression)
+    {
+        try
+        {
+            // Simple evaluation for demo - only handles basic operations
+            var result = new System.Data.DataTable().Compute(expression, null);
+            return result?.ToString() ?? "Error";
+        }
+        catch
+        {
+            return "Error evaluating expression";
+        }
+    }
+}

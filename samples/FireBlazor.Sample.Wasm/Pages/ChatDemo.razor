@@ -1,0 +1,229 @@
+@page "/chat-demo"
+@inject IFirebase Firebase
+@implements IAsyncDisposable
+
+<PageTitle>Chat Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firebase AI Chat Demo</h2>
+    <p class="text-muted">Multi-turn conversation with Gemini AI models.</p>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card" style="height: 600px; display: flex; flex-direction: column;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Chat</h5>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="NewChatAsync" disabled="@_isSending">
+                        New Chat
+                    </button>
+                </div>
+                <div class="card-body overflow-auto flex-grow-1" id="chatMessages">
+                    @if (_errorMessage != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (_chatSession == null)
+                    {
+                        <p class="text-muted text-center mt-4">Start a conversation...</p>
+                    }
+                    else
+                    {
+                        @foreach (var message in _chatSession.History)
+                        {
+                            <div class="mb-3 @(message.Role == "user" ? "text-end" : "")">
+                                <div class="d-inline-block p-2 rounded @(message.Role == "user" ? "bg-primary text-white" : "bg-light")"
+                                     style="max-width: 80%; white-space: pre-wrap;">
+                                    @message.Content
+                                </div>
+                                <div class="small text-muted">
+                                    @(message.Role == "user" ? "You" : "AI")
+                                </div>
+                            </div>
+                        }
+
+                        @if (_isSending)
+                        {
+                            <div class="mb-3">
+                                <div class="d-inline-block p-2 rounded bg-light" style="max-width: 80%; white-space: pre-wrap;">
+                                    @_streamingResponse<span class="blink">▌</span>
+                                </div>
+                                <div class="small text-muted">AI</div>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Type a message..."
+                               @bind="_userMessage" @bind:event="oninput"
+                               @onkeypress="HandleKeyPress" disabled="@_isSending" />
+                        <button class="btn btn-primary" @onclick="SendMessageAsync" disabled="@(_isSending || string.IsNullOrWhiteSpace(_userMessage))">
+                            @if (_isSending)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            }
+                            else
+                            {
+                                <text>Send</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">System Instruction (optional)</label>
+                        <textarea class="form-control" rows="3"
+                                  @bind="_systemInstruction"
+                                  placeholder="e.g., You are a helpful assistant"
+                                  disabled="@(_chatSession != null)"></textarea>
+                        <div class="form-text">Can only be set before starting chat</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useStreaming"
+                                   @bind="_useStreaming" />
+                            <label class="form-check-label" for="useStreaming">
+                                Use streaming (real-time response)
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="small text-muted">
+                        <strong>History:</strong> @(_chatSession?.History.Count ?? 0) messages
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .blink {
+        animation: blink 1s step-end infinite;
+    }
+    @@keyframes blink {
+        50% { opacity: 0; }
+    }
+</style>
+
+@code {
+    private IChatSession? _chatSession;
+    private IGenerativeModel? _model;
+    private string _userMessage = "";
+    private string _systemInstruction = "";
+    private string _streamingResponse = "";
+    private string? _errorMessage;
+    private bool _isSending;
+    private bool _useStreaming = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+    }
+
+    private async Task NewChatAsync()
+    {
+        if (_chatSession != null)
+        {
+            await _chatSession.DisposeAsync();
+        }
+
+        var config = string.IsNullOrWhiteSpace(_systemInstruction) ? null : new GenerationConfig
+        {
+            SystemInstruction = _systemInstruction
+        };
+
+        _model = Firebase.AI.GetModel("gemini-2.5-flash", config);
+        _chatSession = _model.StartChat();
+        _errorMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task SendMessageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_userMessage)) return;
+
+        // Auto-start chat if needed
+        if (_chatSession == null)
+        {
+            await NewChatAsync();
+        }
+
+        _isSending = true;
+        _errorMessage = null;
+        var message = _userMessage;
+        _userMessage = "";
+        _streamingResponse = "";
+
+        try
+        {
+            if (_useStreaming)
+            {
+                await foreach (var chunk in _chatSession!.SendMessageStreamAsync(message))
+                {
+                    if (chunk.IsSuccess)
+                    {
+                        if (!chunk.Value!.IsFinal)
+                        {
+                            _streamingResponse += chunk.Value.Text;
+                            StateHasChanged();
+                        }
+                    }
+                    else
+                    {
+                        _errorMessage = chunk.Error?.Message ?? "Stream error occurred";
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                var result = await _chatSession!.SendMessageAsync(message);
+                if (!result.IsSuccess)
+                {
+                    _errorMessage = result.Error?.Message ?? "Message failed";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSending = false;
+            _streamingResponse = "";
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_isSending && !string.IsNullOrWhiteSpace(_userMessage))
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_chatSession != null)
+        {
+            await _chatSession.DisposeAsync();
+        }
+    }
+}

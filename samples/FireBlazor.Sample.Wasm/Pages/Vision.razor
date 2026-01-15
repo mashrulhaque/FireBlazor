@@ -1,0 +1,350 @@
+@page "/vision"
+@inject IFirebase Firebase
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Vision Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firebase AI Vision Demo</h2>
+    <p class="text-muted">Analyze images using Gemini AI multimodal capabilities.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Image Input</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="imageInput" class="form-label">Select Image</label>
+                        <InputFile id="imageInput" class="form-control" OnChange="HandleFileSelected"
+                                   accept="image/png,image/jpeg,image/gif,image/webp" />
+                        <div class="form-text">Supported: PNG, JPEG, GIF, WebP (max 5MB)</div>
+                    </div>
+
+                    @if (_imagePreviewUrl is not null)
+                    {
+                        <div class="mb-3">
+                            <div class="border rounded p-2 text-center bg-light">
+                                <img src="@_imagePreviewUrl" alt="Preview" class="img-fluid rounded"
+                                     style="max-height: 250px;" />
+                                <div class="mt-2">
+                                    <small class="text-muted">@_selectedFileName (@FormatFileSize(_selectedFileSize))</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label">Your Question</label>
+                        <textarea id="prompt" class="form-control" rows="3"
+                                  @bind="_prompt"
+                                  placeholder="What would you like to know about this image?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quick Prompts</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Describe this image in detail."))">
+                                Describe
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("What objects can you identify in this image?"))">
+                                Identify Objects
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Extract any text visible in this image."))">
+                                Extract Text
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("What are the dominant colors in this image?"))">
+                                Colors
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Is there any inappropriate content in this image?"))">
+                                Content Check
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useStreaming"
+                                   @bind="_useStreaming" />
+                            <label class="form-check-label" for="useStreaming">
+                                Use streaming (real-time response)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" @onclick="AnalyzeImageAsync"
+                                disabled="@(_isAnalyzing || _imageData is null || string.IsNullOrWhiteSpace(_prompt))">
+                            @if (_isAnalyzing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Analyzing...</text>
+                            }
+                            else
+                            {
+                                <text>Analyze Image</text>
+                            }
+                        </button>
+                        @if (_imageData is not null)
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearImage">
+                                Clear Image
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Analysis Result</h5>
+                    @if (!string.IsNullOrEmpty(_response))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearResponse">
+                            Clear
+                        </button>
+                    }
+                </div>
+                <div class="card-body" style="min-height: 300px;">
+                    @if (string.IsNullOrEmpty(_response))
+                    {
+                        <div class="text-center text-muted py-5">
+                            <div class="mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                </svg>
+                            </div>
+                            <p class="mb-0">Upload an image and ask a question to see the analysis result.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="response-content" style="white-space: pre-wrap;">@_response</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Example Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Code Example</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-dark text-light p-3 rounded small mb-0"><code>// Initialize Firebase and get the AI model
+await Firebase.InitializeAsync();
+var model = Firebase.AI.GetModel("gemini-2.5-flash");
+
+// Read image bytes from a file or stream
+byte[] imageBytes = await File.ReadAllBytesAsync("image.png");
+
+// Create multimodal content parts
+var parts = new ContentPart[]
+{
+    ContentPart.Image(imageBytes, "image/png"),
+    ContentPart.Text("Describe this image in detail.")
+};
+
+// Non-streaming: Get complete response
+var result = await model.GenerateContentAsync(parts);
+if (result.IsSuccess)
+{
+    Console.WriteLine(result.Value.Text);
+}
+
+// Streaming: Get response in real-time chunks
+await foreach (var chunk in model.GenerateContentStreamAsync(parts))
+{
+    if (chunk.IsSuccess && !chunk.Value.IsFinal)
+    {
+        Console.Write(chunk.Value.Text);
+    }
+}
+
+// Alternative: Use base64-encoded image
+var base64 = Convert.ToBase64String(imageBytes);
+var base64Parts = new ContentPart[]
+{
+    ContentPart.FromBase64(base64, "image/jpeg"),
+    ContentPart.Text("What objects are in this image?")
+};</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _prompt = "";
+    private string _response = "";
+    private string? _errorMessage;
+    private bool _isAnalyzing;
+    private bool _useStreaming = true;
+
+    // Image data
+    private byte[]? _imageData;
+    private string? _imageMimeType;
+    private string? _imagePreviewUrl;
+    private string? _selectedFileName;
+    private long _selectedFileSize;
+
+    private const long MaxFileSize = 5 * 1024 * 1024; // 5MB
+    private static readonly string[] SupportedMimeTypes = { "image/png", "image/jpeg", "image/gif", "image/webp" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        _errorMessage = null;
+
+        // Validate file size
+        if (file.Size > MaxFileSize)
+        {
+            _errorMessage = $"File size exceeds the maximum allowed size of {FormatFileSize(MaxFileSize)}.";
+            return;
+        }
+
+        // Validate MIME type
+        if (!SupportedMimeTypes.Contains(file.ContentType))
+        {
+            _errorMessage = "Unsupported file type. Please use PNG, JPEG, GIF, or WebP images.";
+            return;
+        }
+
+        try
+        {
+            // Read file data
+            using var stream = file.OpenReadStream(MaxFileSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            _imageData = ms.ToArray();
+            _imageMimeType = file.ContentType;
+            _selectedFileName = file.Name;
+            _selectedFileSize = file.Size;
+
+            // Create preview URL
+            var base64 = Convert.ToBase64String(_imageData);
+            _imagePreviewUrl = $"data:{_imageMimeType};base64,{base64}";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error reading file: {ex.Message}";
+            ClearImage();
+        }
+    }
+
+    private void SetPrompt(string prompt)
+    {
+        _prompt = prompt;
+    }
+
+    private async Task AnalyzeImageAsync()
+    {
+        if (_imageData is null || string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Please select an image and enter a prompt.";
+            return;
+        }
+
+        _isAnalyzing = true;
+        _errorMessage = null;
+        _response = "";
+
+        try
+        {
+            var model = Firebase.AI.GetModel("gemini-2.5-flash");
+
+            var parts = new ContentPart[]
+            {
+                ContentPart.Image(_imageData, _imageMimeType!),
+                ContentPart.Text(_prompt)
+            };
+
+            if (_useStreaming)
+            {
+                await foreach (var chunk in model.GenerateContentStreamAsync(parts))
+                {
+                    if (chunk.IsSuccess)
+                    {
+                        if (!chunk.Value.IsFinal)
+                        {
+                            _response += chunk.Value.Text;
+                            StateHasChanged();
+                        }
+                    }
+                    else
+                    {
+                        _errorMessage = chunk.Error?.Message ?? "Stream error occurred";
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                var result = await model.GenerateContentAsync(parts);
+                if (result.IsSuccess)
+                {
+                    _response = result.Value.Text;
+                }
+                else
+                {
+                    _errorMessage = result.Error?.Message ?? "Analysis failed";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isAnalyzing = false;
+        }
+    }
+
+    private void ClearImage()
+    {
+        _imageData = null;
+        _imageMimeType = null;
+        _imagePreviewUrl = null;
+        _selectedFileName = null;
+        _selectedFileSize = 0;
+    }
+
+    private void ClearResponse()
+    {
+        _response = "";
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

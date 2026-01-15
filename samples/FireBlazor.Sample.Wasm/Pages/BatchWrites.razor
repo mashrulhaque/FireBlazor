@@ -1,0 +1,426 @@
+@page "/batchwrites"
+@inject IFirebase Firebase
+
+<PageTitle>Batch Writes - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Batch Write Operations</h2>
+    <p class="text-muted">Demonstrate atomic batch writes: multiple Set, Update, and Delete operations in a single transaction.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Batch Add Section -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Add (Multiple Items)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Add multiple items atomically. Either all are created, or none are.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Number of items to add:</label>
+                        <input type="number" class="form-control" @bind="_batchAddCount" min="1" max="10" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Title prefix:</label>
+                        <input type="text" class="form-control" @bind="_batchAddPrefix" placeholder="e.g., Task" />
+                    </div>
+
+                    <button class="btn btn-primary w-100" @onclick="BatchAddItems" disabled="@_isLoading">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Add @_batchAddCount Items
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Update Section -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Update (Mark All Complete)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Update all incomplete items to completed status in a single atomic operation.</p>
+
+                    @{
+                        var incompleteCount = _items?.Count(i => i.Data?.Completed == false) ?? 0;
+                    }
+                    <div class="alert alert-info">
+                        <strong>@incompleteCount</strong> incomplete item(s) will be updated
+                    </div>
+
+                    <button class="btn btn-success w-100" @onclick="BatchMarkAllComplete"
+                            disabled="@(_isLoading || incompleteCount == 0)">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Mark All Complete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Delete Section -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Delete (Remove Completed)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Delete all completed items in a single atomic operation.</p>
+
+                    @{
+                        var completedCount = _items?.Count(i => i.Data?.Completed == true) ?? 0;
+                    }
+                    <div class="alert alert-warning">
+                        <strong>@completedCount</strong> completed item(s) will be deleted
+                    </div>
+
+                    <button class="btn btn-danger w-100" @onclick="BatchDeleteCompleted"
+                            disabled="@(_isLoading || completedCount == 0)">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Delete All Completed
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete All Section -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Delete All</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Delete all items in the collection atomically.</p>
+
+                    <div class="alert alert-danger">
+                        <strong>@(_items?.Count ?? 0)</strong> total item(s) will be deleted
+                    </div>
+
+                    <button class="btn btn-outline-danger w-100" @onclick="BatchDeleteAll"
+                            disabled="@(_isLoading || (_items?.Count ?? 0) == 0)">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Delete All Items
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items List -->
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Current Items</h5>
+            <button class="btn btn-sm btn-outline-primary" @onclick="LoadItems" disabled="@_isLoading">
+                Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            @if (_items is null)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (_items.Count == 0)
+            {
+                <div class="alert alert-info mb-0">
+                    No items found. Use "Batch Add" to create some items.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _items)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (item.Data?.Completed == true)
+                                        {
+                                            <span class="text-decoration-line-through text-muted">@item.Data?.Title</span>
+                                        }
+                                        else
+                                        {
+                                            @item.Data?.Title
+                                        }
+                                    </td>
+                                    <td class="text-muted">@item.Data?.Description</td>
+                                    <td>
+                                        @if (item.Data?.Completed == true)
+                                        {
+                                            <span class="badge bg-success">Completed</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Pending</span>
+                                        }
+                                    </td>
+                                    <td class="text-muted small">@item.Data?.CreatedAt.ToString("g")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Code Example -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Code Example</h5>
+        </div>
+        <div class="card-body">
+            <pre class="bg-dark text-light p-3 rounded"><code>// Batch write example - all operations are atomic
+await Firebase.Firestore.BatchAsync(batch =>
+{
+    // Add multiple documents
+    var doc1 = collection.Document("item1");
+    var doc2 = collection.Document("item2");
+
+    batch.Set(doc1, new TodoItem { Title = "Task 1" });
+    batch.Set(doc2, new TodoItem { Title = "Task 2" });
+
+    // Update a document
+    var doc3 = collection.Document("item3");
+    batch.Update(doc3, new { Completed = true });
+
+    // Delete a document
+    var doc4 = collection.Document("item4");
+    batch.Delete(doc4);
+});</code></pre>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DocumentSnapshot<TodoItem>>? _items;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isLoading;
+    private int _batchAddCount = 3;
+    private string _batchAddPrefix = "Batch Task";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _isLoading = true;
+
+        var result = await Firebase.Firestore
+            .Collection<TodoItem>("demo-todos")
+            .GetAsync();
+
+        if (result.IsSuccess)
+        {
+            _items = result.Value.ToList();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+            _items = new List<DocumentSnapshot<TodoItem>>();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task BatchAddItems()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<TodoItem>("demo-todos");
+        var itemsToAdd = new List<(IDocumentReference<TodoItem> doc, TodoItem data)>();
+
+        for (int i = 1; i <= _batchAddCount; i++)
+        {
+            var id = Guid.NewGuid().ToString("N")[..8];
+            var doc = collection.Document(id);
+            var data = new TodoItem
+            {
+                Title = $"{_batchAddPrefix} {i}",
+                Description = $"Created in batch operation (item {i} of {_batchAddCount})",
+                Completed = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            itemsToAdd.Add((doc, data));
+        }
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var (doc, data) in itemsToAdd)
+            {
+                batch.Set(doc, data);
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Successfully added {_batchAddCount} items in a single batch!";
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Batch add failed";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task BatchMarkAllComplete()
+    {
+        if (_items is null) return;
+
+        var incompleteItems = _items.Where(i => i.Data?.Completed == false).ToList();
+        if (incompleteItems.Count == 0) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<TodoItem>("demo-todos");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var item in incompleteItems)
+            {
+                var doc = collection.Document(item.Id);
+                batch.Update(doc, new { Completed = true });
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Successfully marked {incompleteItems.Count} items as complete!";
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Batch update failed";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task BatchDeleteCompleted()
+    {
+        if (_items is null) return;
+
+        var completedItems = _items.Where(i => i.Data?.Completed == true).ToList();
+        if (completedItems.Count == 0) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<TodoItem>("demo-todos");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var item in completedItems)
+            {
+                var doc = collection.Document(item.Id);
+                batch.Delete(doc);
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Successfully deleted {completedItems.Count} completed items!";
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Batch delete failed";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task BatchDeleteAll()
+    {
+        if (_items is null || _items.Count == 0) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<TodoItem>("demo-todos");
+        var count = _items.Count;
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var item in _items)
+            {
+                var doc = collection.Document(item.Id);
+                batch.Delete(doc);
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Successfully deleted all {count} items!";
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Batch delete failed";
+        }
+
+        _isLoading = false;
+    }
+
+    public class TodoItem
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public bool Completed { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

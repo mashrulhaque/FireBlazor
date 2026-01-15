@@ -1,0 +1,453 @@
+@page "/document-demo"
+@inject IFirebase Firebase
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Document Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firebase AI Document Demo</h2>
+    <p class="text-muted">Upload PDFs and documents for AI analysis using Gemini multimodal capabilities.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Document Input</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @_successMessage
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="docInput" class="form-label">Select Document</label>
+                        <InputFile id="docInput" class="form-control" OnChange="HandleFileSelected"
+                                   accept=".pdf,.doc,.docx,.txt,.md,.csv,.json,.xml" />
+                        <div class="form-text">Supported: PDF, Word, Text, Markdown, CSV, JSON, XML (max 20MB)</div>
+                    </div>
+
+                    @if (_uploadProgress > 0 && _uploadProgress < 100)
+                    {
+                        <div class="mb-3">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: @_uploadProgress%"
+                                     aria-valuenow="@_uploadProgress"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    @_uploadProgress.ToString("F0")%
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_uploadedDocument is not null)
+                    {
+                        <div class="mb-3">
+                            <div class="border rounded p-3 bg-light">
+                                <div class="d-flex align-items-center">
+                                    <span class="bi bi-file-earmark-text fs-3 me-3 text-primary"></span>
+                                    <div>
+                                        <strong>@_uploadedDocument.Name</strong>
+                                        <div class="small text-muted">@_uploadedDocument.ContentType</div>
+                                        <div class="small text-muted">@FormatFileSize(_uploadedDocument.Size)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label">Your Question</label>
+                        <textarea id="prompt" class="form-control" rows="3"
+                                  @bind="_prompt"
+                                  placeholder="What would you like to know about this document?"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quick Prompts</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Summarize this document in 3-5 bullet points."))">
+                                Summarize
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("What are the key points and main takeaways from this document?"))">
+                                Key Points
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Extract all important data, numbers, and statistics from this document."))">
+                                Extract Data
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("List all action items, tasks, or recommendations mentioned in this document."))">
+                                Action Items
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => SetPrompt("Explain this document in simple terms that anyone can understand."))">
+                                Simplify
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useStreaming"
+                                   @bind="_useStreaming" />
+                            <label class="form-check-label" for="useStreaming">
+                                Use streaming (real-time response)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" @onclick="AnalyzeDocumentAsync"
+                                disabled="@(_isAnalyzing || _uploadedDocument is null || string.IsNullOrWhiteSpace(_prompt))">
+                            @if (_isAnalyzing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Analyzing...</text>
+                            }
+                            else
+                            {
+                                <text>Analyze Document</text>
+                            }
+                        </button>
+                        @if (_uploadedDocument is not null)
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearDocument">
+                                Clear Document
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Analysis Result</h5>
+                    @if (!string.IsNullOrEmpty(_response))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearResponse">
+                            Clear
+                        </button>
+                    }
+                </div>
+                <div class="card-body" style="min-height: 300px;">
+                    @if (string.IsNullOrEmpty(_response))
+                    {
+                        <div class="text-center text-muted py-5">
+                            <div class="mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM11.5 3A1.5 1.5 0 0 0 10 4.5V14H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6v2.5A1.5 1.5 0 0 0 11.5 5H13v8H4V3h7.5z"/>
+                                    <path d="M4.5 12.5A.5.5 0 0 1 5 12h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0-2A.5.5 0 0 1 5 10h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0-2A.5.5 0 0 1 5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0-2A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/>
+                                </svg>
+                            </div>
+                            <p class="mb-0">Upload a document and ask a question to see the analysis result.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="response-content" style="white-space: pre-wrap;">@_response</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Example Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Code Example</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-dark text-light p-3 rounded small mb-0"><code>// Read document as bytes
+byte[] documentBytes = await File.ReadAllBytesAsync("report.pdf");
+var base64 = Convert.ToBase64String(documentBytes);
+
+// Get the AI model
+var model = Firebase.AI.GetModel("gemini-2.5-flash");
+
+// Create content parts with inline document data
+var parts = new ContentPart[]
+{
+    ContentPart.FromBase64(base64, "application/pdf"),
+    ContentPart.Text("Summarize this document.")
+};
+
+// Non-streaming: Get complete response
+var result = await model.GenerateContentAsync(parts);
+if (result.IsSuccess)
+{
+    Console.WriteLine(result.Value.Text);
+}
+
+// Streaming: Get response in real-time chunks
+await foreach (var chunk in model.GenerateContentStreamAsync(parts))
+{
+    if (chunk.IsSuccess && !chunk.Value.IsFinal)
+    {
+        Console.Write(chunk.Value.Text);
+    }
+}
+
+// For text files, just include content directly
+var textParts = new ContentPart[]
+{
+    ContentPart.Text($"Document:\n{textContent}"),
+    ContentPart.Text("What are the key points?")
+};</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _prompt = "";
+    private string _response = "";
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isAnalyzing;
+    private bool _useStreaming = true;
+    private double _uploadProgress;
+
+    // Document data
+    private UploadedDocument? _uploadedDocument;
+
+    private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
+
+    private static readonly Dictionary<string, string> MimeTypes = new()
+    {
+        { ".pdf", "application/pdf" },
+        { ".doc", "application/msword" },
+        { ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+        { ".txt", "text/plain" },
+        { ".md", "text/markdown" },
+        { ".csv", "text/csv" },
+        { ".json", "application/json" },
+        { ".xml", "application/xml" }
+    };
+
+    // Text-based file types that should be read directly instead of using gs:// URI
+    private static readonly HashSet<string> TextBasedExtensions = new()
+    {
+        ".txt", ".md", ".csv", ".json", ".xml"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        _errorMessage = null;
+        _successMessage = null;
+        _uploadProgress = 0;
+        _uploadedDocument = null;
+        _response = "";
+
+        // Validate file size
+        if (file.Size > MaxFileSize)
+        {
+            _errorMessage = $"File size exceeds the maximum allowed size of {FormatFileSize(MaxFileSize)}.";
+            return;
+        }
+
+        // Get file extension and validate
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!MimeTypes.ContainsKey(extension))
+        {
+            _errorMessage = "Unsupported file type. Please use PDF, Word, Text, Markdown, CSV, JSON, or XML files.";
+            return;
+        }
+
+        try
+        {
+            var mimeType = MimeTypes.GetValueOrDefault(extension, file.ContentType);
+            var isTextBased = TextBasedExtensions.Contains(extension);
+            string? textContent = null;
+
+            // For text-based files, read content directly
+            if (isTextBased)
+            {
+                using var stream = file.OpenReadStream(MaxFileSize);
+                using var reader = new StreamReader(stream);
+                textContent = await reader.ReadToEndAsync();
+                _uploadProgress = 100;
+
+                _uploadedDocument = new UploadedDocument
+                {
+                    Name = file.Name,
+                    Size = file.Size,
+                    ContentType = mimeType,
+                    IsTextBased = true,
+                    TextContent = textContent
+                };
+                _successMessage = "Document loaded successfully!";
+            }
+            else
+            {
+                // For binary files (PDF, DOC), read as base64 for inline data
+                using var stream = file.OpenReadStream(MaxFileSize);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var bytes = ms.ToArray();
+                var base64Data = Convert.ToBase64String(bytes);
+                _uploadProgress = 100;
+
+                _uploadedDocument = new UploadedDocument
+                {
+                    Name = file.Name,
+                    Size = file.Size,
+                    ContentType = mimeType,
+                    IsTextBased = false,
+                    Base64Data = base64Data
+                };
+                _successMessage = "Document loaded successfully!";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error uploading file: {ex.Message}";
+        }
+    }
+
+    private void SetPrompt(string prompt)
+    {
+        _prompt = prompt;
+    }
+
+    private async Task AnalyzeDocumentAsync()
+    {
+        if (_uploadedDocument is null || string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Please upload a document and enter a prompt.";
+            return;
+        }
+
+        _isAnalyzing = true;
+        _errorMessage = null;
+        _response = "";
+
+        try
+        {
+            var model = Firebase.AI.GetModel("gemini-2.5-flash");
+
+            // Build content parts based on document type
+            ContentPart[] parts;
+            if (_uploadedDocument.IsTextBased && !string.IsNullOrEmpty(_uploadedDocument.TextContent))
+            {
+                // For text-based files, include content directly
+                parts = new ContentPart[]
+                {
+                    ContentPart.Text($"Document content ({_uploadedDocument.Name}):\n\n{_uploadedDocument.TextContent}"),
+                    ContentPart.Text($"\n\nUser question: {_prompt}")
+                };
+            }
+            else if (!string.IsNullOrEmpty(_uploadedDocument.Base64Data))
+            {
+                // For binary files (PDF, DOC), send as inline base64 data
+                parts = new ContentPart[]
+                {
+                    ContentPart.FromBase64(_uploadedDocument.Base64Data, _uploadedDocument.ContentType),
+                    ContentPart.Text(_prompt)
+                };
+            }
+            else
+            {
+                _errorMessage = "Document data not available.";
+                return;
+            }
+
+            if (_useStreaming)
+            {
+                await foreach (var chunk in model.GenerateContentStreamAsync(parts))
+                {
+                    if (chunk.IsSuccess)
+                    {
+                        if (!chunk.Value.IsFinal)
+                        {
+                            _response += chunk.Value.Text;
+                            StateHasChanged();
+                        }
+                    }
+                    else
+                    {
+                        _errorMessage = chunk.Error?.Message ?? "Stream error occurred";
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                var result = await model.GenerateContentAsync(parts);
+                if (result.IsSuccess)
+                {
+                    _response = result.Value.Text;
+                }
+                else
+                {
+                    _errorMessage = result.Error?.Message ?? "Analysis failed";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isAnalyzing = false;
+        }
+    }
+
+    private void ClearDocument()
+    {
+        _uploadedDocument = null;
+        _uploadProgress = 0;
+        _successMessage = null;
+    }
+
+    private void ClearResponse()
+    {
+        _response = "";
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private class UploadedDocument
+    {
+        public string Name { get; set; } = "";
+        public long Size { get; set; }
+        public string ContentType { get; set; } = "";
+        public bool IsTextBased { get; set; }
+        public string? TextContent { get; set; }
+        public string? Base64Data { get; set; }
+    }
+}

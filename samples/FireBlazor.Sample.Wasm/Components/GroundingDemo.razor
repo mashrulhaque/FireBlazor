@@ -1,0 +1,212 @@
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Grounding with Google Search</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Grounding connects AI responses to real-world data via Google Search for accurate, up-to-date information.
+                </p>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="enableGrounding" @bind="_enableGrounding" />
+                        <label class="form-check-label" for="enableGrounding">
+                            Enable Google Search Grounding
+                        </label>
+                    </div>
+                </div>
+
+                @if (_enableGrounding)
+                {
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="dynamicRetrieval" @bind="_useDynamicRetrieval" />
+                            <label class="form-check-label" for="dynamicRetrieval">
+                                Use Dynamic Retrieval
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (_useDynamicRetrieval)
+                    {
+                        <div class="mb-3">
+                            <label for="threshold" class="form-label">
+                                Dynamic Threshold: @_dynamicThreshold.ToString("F2")
+                            </label>
+                            <input type="range" class="form-range" id="threshold"
+                                   min="0" max="1" step="0.1"
+                                   @bind="_dynamicThreshold" @bind:event="oninput" />
+                            <small class="text-muted">Higher = more selective about when to search</small>
+                        </div>
+                    }
+                }
+
+                <div class="mb-3">
+                    <label for="groundingPrompt" class="form-label">Question (works best with current events)</label>
+                    <textarea id="groundingPrompt" class="form-control" rows="2" @bind="_prompt"
+                              placeholder="e.g., What are the latest developments in AI?"></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="GenerateWithGroundingAsync" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Generate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Response</h5>
+                @if (_response?.IsGrounded == true)
+                {
+                    <span class="badge bg-success">Grounded</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (_response != null)
+                {
+                    @if (!string.IsNullOrEmpty(_response.Text))
+                    {
+                        <div class="mb-3" style="white-space: pre-wrap;">@_response.Text</div>
+                    }
+
+                    @if (_response.GroundingMetadata != null)
+                    {
+                        <hr />
+                        <h6>Grounding Metadata</h6>
+
+                        @if (_response.GroundingMetadata.SearchQueries?.Count > 0)
+                        {
+                            <div class="mb-2">
+                                <strong class="small">Search Queries:</strong>
+                                <ul class="mb-0 small">
+                                    @foreach (var query in _response.GroundingMetadata.SearchQueries)
+                                    {
+                                        <li>@query</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        @if (_response.GroundingSources.Any())
+                        {
+                            <div class="mb-2">
+                                <strong class="small">Sources:</strong>
+                                <ul class="mb-0 small">
+                                    @foreach (var source in _response.GroundingSources)
+                                    {
+                                        <li>
+                                            <a href="@source.Uri" target="_blank" rel="noopener">
+                                                @(source.Title ?? source.Uri)
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        @if (_response.GroundingMetadata.GroundingSupports?.Count > 0)
+                        {
+                            <div class="mb-2">
+                                <strong class="small">Supported Segments:</strong>
+                                @foreach (var support in _response.GroundingMetadata.GroundingSupports)
+                                {
+                                    @if (support.Segment != null)
+                                    {
+                                        <div class="border-start border-3 border-success ps-2 my-1 small">
+                                            "@support.Segment.Text"
+                                            @if (support.ConfidenceScores?.Count > 0)
+                                            {
+                                                <span class="text-muted">
+                                                    (confidence: @support.ConfidenceScores.Max().ToString("P0"))
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Grounded response will appear here...</p>
+                }
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger mt-3 mb-0">@_error</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required IFirebase Firebase { get; set; }
+
+    private string _prompt = "What are the latest AI developments in 2026?";
+    private GenerateContentResponse? _response;
+    private bool _isLoading;
+    private string? _error;
+    private bool _enableGrounding = true;
+    private bool _useDynamicRetrieval = false;
+    private float _dynamicThreshold = 0.5f;
+
+    private async Task GenerateWithGroundingAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _error = "Please enter a question";
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        _response = null;
+
+        try
+        {
+            GenerationConfig? config = null;
+
+            if (_enableGrounding)
+            {
+                var grounding = _useDynamicRetrieval
+                    ? GroundingConfig.WithGoogleSearch(_dynamicThreshold)
+                    : GroundingConfig.WithGoogleSearch();
+
+                config = new GenerationConfig
+                {
+                    Grounding = grounding
+                };
+            }
+
+            var model = Firebase.AI.GetModel("gemini-2.0-flash", config);
+            var result = await model.GenerateContentAsync(_prompt);
+
+            if (result.IsSuccess)
+            {
+                _response = result.Value;
+            }
+            else
+            {
+                _error = result.Error?.Message ?? "Generation failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

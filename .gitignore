@@ -1,0 +1,64 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bld/
+[Bb]uild/
+[Oo]ut/
+docs/*
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+.playwright-mcp/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+# Blazor
+**/wwwroot/_framework/
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# User secrets
+secrets.json
+
+# Local Firebase credentials (use firebase-credentials.local.json for development)
+**/firebase-credentials.local.json
+**/wwwroot/firebase-credentials.local.json
+samples/**/appsettings.Development.json
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+serviceAccountKey.json
+samples/firebase-admin.json
+firebase-debug.log

@@ -1,0 +1,195 @@
+@page "/appcheck"
+@inject IFirebase Firebase
+@implements IDisposable
+
+<PageTitle>App Check - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>App Check Demo</h2>
+    <p class="text-muted">Firebase App Check protects your backend resources from abuse.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">App Check Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="me-2">Status:</span>
+                        @switch (Firebase.AppCheck.Status)
+                        {
+                            case AppCheckStatus.NotInitialized:
+                                <span class="badge bg-secondary">Not Initialized</span>
+                                break;
+                            case AppCheckStatus.Initializing:
+                                <span class="badge bg-warning">
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    Initializing
+                                </span>
+                                break;
+                            case AppCheckStatus.Active:
+                                <span class="badge bg-success">Active</span>
+                                break;
+                            case AppCheckStatus.Failed:
+                                <span class="badge bg-danger">Failed</span>
+                                break;
+                            case AppCheckStatus.TokenRefreshing:
+                                <span class="badge bg-info">Refreshing Token</span>
+                                break;
+                        }
+                    </div>
+
+                    @if (Firebase.AppCheck.Status == AppCheckStatus.Failed && Firebase.AppCheck.LastError != null)
+                    {
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> @Firebase.AppCheck.LastError.Message
+                            <br />
+                            <small class="text-muted">Code: @Firebase.AppCheck.LastError.Code</small>
+                        </div>
+                    }
+
+                    @if (Firebase.AppCheck.CurrentToken != null)
+                    {
+                        <div class="mt-3">
+                            <strong>Current Token:</strong>
+                            <div class="bg-light p-2 rounded mt-1" style="word-break: break-all; font-family: monospace; font-size: 0.8em;">
+                                @Firebase.AppCheck.CurrentToken.Token[..Math.Min(50, Firebase.AppCheck.CurrentToken.Token.Length)]...
+                            </div>
+                            <small class="text-muted">
+                                Expires: @Firebase.AppCheck.CurrentToken.ExpirationTime.LocalDateTime.ToString("g")
+                                @if (Firebase.AppCheck.CurrentToken.IsExpired)
+                                {
+                                    <span class="badge bg-warning ms-1">Expired</span>
+                                }
+                            </small>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Token Operations</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary me-2" @onclick="GetToken" disabled="@_isLoading">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Get Token
+                    </button>
+                    <button class="btn btn-outline-primary" @onclick="ForceRefreshToken" disabled="@_isLoading">
+                        Force Refresh
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(_message))
+                    {
+                        <div class="alert @(_isError ? "alert-danger" : "alert-success") mt-3">
+                            @_message
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Configuration Example</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>// Program.cs
+builder.Services.AddFirebase(options => options
+    .WithProject("your-project")
+    .WithApiKey("your-api-key")
+    .UseAppCheck(appCheck => appCheck
+        .ReCaptchaEnterprise("your-site-key")
+        .AutoDebug())); // Auto-enables debug on localhost</code></pre>
+
+                    <p class="text-muted mt-3">
+                        <strong>Features:</strong>
+                    </p>
+                    <ul class="text-muted">
+                        <li><code>AutoDebug()</code> - Automatically enables debug mode on localhost, 127.0.0.1, [::1], and *.localhost subdomains (useful for Docker/container development)</li>
+                        <li>Status tracking via <code>AppCheck.Status</code></li>
+                        <li>Error visibility via <code>AppCheck.LastError</code></li>
+                        <li>Auto-activation during <code>InitializeAsync()</code></li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <strong>Security Note:</strong> Debug mode allows access to Firebase resources from unverified devices.
+                        Never use in production builds. Keep debug tokens private and revoke immediately if compromised.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isLoading;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        Firebase.AppCheck.OnStatusChanged += OnStatusChanged;
+    }
+
+    private void OnStatusChanged(AppCheckStatus status)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GetToken()
+    {
+        _isLoading = true;
+        _message = null;
+        StateHasChanged();
+
+        var result = await Firebase.AppCheck.GetTokenAsync();
+
+        if (result.IsSuccess)
+        {
+            _message = $"Token retrieved successfully. Expires: {result.Value.ExpirationTime.LocalDateTime:g}";
+            _isError = false;
+        }
+        else
+        {
+            _message = $"Failed to get token: {result.Error?.Message}";
+            _isError = true;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task ForceRefreshToken()
+    {
+        _isLoading = true;
+        _message = null;
+        StateHasChanged();
+
+        var result = await Firebase.AppCheck.GetTokenAsync(forceRefresh: true);
+
+        if (result.IsSuccess)
+        {
+            _message = $"Token refreshed successfully. New expiration: {result.Value.ExpirationTime.LocalDateTime:g}";
+            _isError = false;
+        }
+        else
+        {
+            _message = $"Failed to refresh token: {result.Error?.Message}";
+            _isError = true;
+        }
+
+        _isLoading = false;
+    }
+
+    public void Dispose()
+    {
+        Firebase.AppCheck.OnStatusChanged -= OnStatusChanged;
+    }
+}

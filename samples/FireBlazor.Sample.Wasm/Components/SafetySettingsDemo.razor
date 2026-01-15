@@ -1,0 +1,191 @@
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Safety Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Configure content safety thresholds for different harm categories.</p>
+
+                <div class="mb-3">
+                    <label class="form-label">Harm Categories</label>
+                    @foreach (var category in Enum.GetValues<HarmCategory>().Where(c => c != HarmCategory.Unspecified))
+                    {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small">@GetCategoryName(category)</span>
+                                <select class="form-select form-select-sm w-auto" @bind="_thresholds[category]">
+                                    <option value="@HarmBlockThreshold.BlockLowAndAbove">Block Low+</option>
+                                    <option value="@HarmBlockThreshold.BlockMediumAndAbove">Block Medium+</option>
+                                    <option value="@HarmBlockThreshold.BlockOnlyHigh">Block High Only</option>
+                                    <option value="@HarmBlockThreshold.BlockNone">Block None</option>
+                                    <option value="@HarmBlockThreshold.Off">Off</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label for="safetyPrompt" class="form-label">Test Prompt</label>
+                    <textarea id="safetyPrompt" class="form-control" rows="3" @bind="_prompt"
+                              placeholder="Enter a prompt to test safety settings..."></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="GenerateWithSafetyAsync" disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Generate with Safety
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Response & Safety Ratings</h5>
+            </div>
+            <div class="card-body">
+                @if (_response != null)
+                {
+                    @if (_response.WasBlocked)
+                    {
+                        <div class="alert alert-warning">
+                            <strong>Content Blocked!</strong> The response was blocked due to safety settings.
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_response.Text))
+                    {
+                        <div class="mb-3">
+                            <strong>Generated Text:</strong>
+                            <div class="border rounded p-2 mt-1" style="white-space: pre-wrap;">@_response.Text</div>
+                        </div>
+                    }
+
+                    @if (_response.SafetyRatings?.Count > 0)
+                    {
+                        <strong>Safety Ratings:</strong>
+                        <table class="table table-sm mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Probability</th>
+                                    <th>Blocked</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var rating in _response.SafetyRatings)
+                                {
+                                    <tr class="@(rating.Blocked ? "table-danger" : "")">
+                                        <td>@GetCategoryName(rating.Category)</td>
+                                        <td>
+                                            <span class="badge @GetProbabilityBadgeClass(rating.Probability)">
+                                                @rating.Probability
+                                            </span>
+                                        </td>
+                                        <td>@(rating.Blocked ? "Yes" : "No")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Response and safety ratings will appear here...</p>
+                }
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger mt-3 mb-0">@_error</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public required IFirebase Firebase { get; set; }
+
+    private string _prompt = "Tell me a friendly joke about programming.";
+    private GenerateContentResponse? _response;
+    private bool _isLoading;
+    private string? _error;
+
+    private Dictionary<HarmCategory, HarmBlockThreshold> _thresholds = new()
+    {
+        { HarmCategory.HateSpeech, HarmBlockThreshold.BlockMediumAndAbove },
+        { HarmCategory.DangerousContent, HarmBlockThreshold.BlockMediumAndAbove },
+        { HarmCategory.Harassment, HarmBlockThreshold.BlockMediumAndAbove },
+        { HarmCategory.SexuallyExplicit, HarmBlockThreshold.BlockMediumAndAbove },
+        { HarmCategory.CivicIntegrity, HarmBlockThreshold.BlockMediumAndAbove }
+    };
+
+    private async Task GenerateWithSafetyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _error = "Please enter a prompt";
+            return;
+        }
+
+        _isLoading = true;
+        _error = null;
+        _response = null;
+
+        try
+        {
+            var safetySettings = _thresholds
+                .Select(kvp => new SafetySetting { Category = kvp.Key, Threshold = kvp.Value })
+                .ToList();
+
+            var config = new GenerationConfig
+            {
+                SafetySettings = safetySettings
+            };
+
+            var model = Firebase.AI.GetModel("gemini-2.0-flash", config);
+            var result = await model.GenerateContentAsync(_prompt);
+
+            if (result.IsSuccess)
+            {
+                _response = result.Value;
+            }
+            else
+            {
+                _error = result.Error?.Message ?? "Generation failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetCategoryName(HarmCategory category) => category switch
+    {
+        HarmCategory.HateSpeech => "Hate Speech",
+        HarmCategory.DangerousContent => "Dangerous Content",
+        HarmCategory.Harassment => "Harassment",
+        HarmCategory.SexuallyExplicit => "Sexually Explicit",
+        HarmCategory.CivicIntegrity => "Civic Integrity",
+        _ => category.ToString()
+    };
+
+    private string GetProbabilityBadgeClass(HarmProbability probability) => probability switch
+    {
+        HarmProbability.Negligible => "bg-success",
+        HarmProbability.Low => "bg-info",
+        HarmProbability.Medium => "bg-warning",
+        HarmProbability.High => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

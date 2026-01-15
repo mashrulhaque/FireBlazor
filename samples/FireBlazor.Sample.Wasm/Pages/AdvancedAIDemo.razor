@@ -1,0 +1,74 @@
+@page "/advanced-ai"
+@inject IFirebase Firebase
+
+<PageTitle>Advanced AI - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Advanced AI Features (Phase 5)</h2>
+    <p class="text-muted">Demonstrates token counting, safety settings, function calling, and grounding.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == "tokens" ? "active" : "")" @onclick="@(() => _activeTab = "tokens")">
+                Token Counting
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == "safety" ? "active" : "")" @onclick="@(() => _activeTab = "safety")">
+                Safety Settings
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == "functions" ? "active" : "")" @onclick="@(() => _activeTab = "functions")">
+                Function Calling
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_activeTab == "grounding" ? "active" : "")" @onclick="@(() => _activeTab = "grounding")">
+                Grounding
+            </button>
+        </li>
+    </ul>
+
+    @if (_activeTab == "tokens")
+    {
+        <TokenCountingDemo Firebase="Firebase" />
+    }
+    else if (_activeTab == "safety")
+    {
+        <SafetySettingsDemo Firebase="Firebase" />
+    }
+    else if (_activeTab == "functions")
+    {
+        <FunctionCallingDemo Firebase="Firebase" />
+    }
+    else if (_activeTab == "grounding")
+    {
+        <GroundingDemo Firebase="Firebase" />
+    }
+</div>
+
+@code {
+    private string _activeTab = "tokens";
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await Firebase.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to initialize Firebase: {ex.Message}";
+        }
+    }
+}

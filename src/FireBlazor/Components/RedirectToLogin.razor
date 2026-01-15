@@ -1,0 +1,17 @@
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
+@inject FirebaseAuthorizationOptions Options
+
+@code {
+    protected override void OnInitialized()
+    {
+        var currentUri = Navigation.Uri;
+        var baseUri = Navigation.BaseUri;
+        var relativePath = currentUri.StartsWith(baseUri)
+            ? currentUri[baseUri.Length..]
+            : currentUri;
+
+        var returnUrl = Uri.EscapeDataString(relativePath);
+        Navigation.NavigateTo($"{Options.LoginPath}?returnUrl={returnUrl}", forceLoad: false);
+    }
+}

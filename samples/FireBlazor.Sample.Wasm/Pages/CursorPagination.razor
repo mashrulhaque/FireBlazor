@@ -1,0 +1,564 @@
+@page "/cursorpagination"
+@inject IFirebase Firebase
+
+<PageTitle>Cursor Pagination - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Cursor Pagination</h2>
+    <p class="text-muted">Demonstrate Firestore cursor-based pagination using StartAfter, StartAt, EndBefore, and EndAt.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Controls -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Pagination Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Order By:</label>
+                        <select class="form-select" @bind="_orderBy" @bind:after="ResetAndLoad">
+                            <option value="Name">Name</option>
+                            <option value="Price">Price</option>
+                            <option value="Stock">Stock</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Direction:</label>
+                        <select class="form-select" @bind="_orderDirection" @bind:after="ResetAndLoad">
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Page Size:</label>
+                        <select class="form-select" @bind="_pageSize" @bind:after="ResetAndLoad">
+                            <option value="3">3 items</option>
+                            <option value="5">5 items</option>
+                            <option value="10">10 items</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Filter by Category:</label>
+                        <select class="form-select" @bind="_filterCategory" @bind:after="ResetAndLoad">
+                            <option value="">All Categories</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Clothing">Clothing</option>
+                            <option value="Food">Food</option>
+                            <option value="Books">Books</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sample Data -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Sample Data</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Generate sample products to demonstrate pagination.</p>
+                    <button class="btn btn-outline-secondary w-100 mb-2" @onclick="AddSampleData" disabled="@_isLoading">
+                        Add 20 Sample Products
+                    </button>
+                    <button class="btn btn-outline-danger w-100" @onclick="DeleteAllProducts" disabled="@_isLoading">
+                        Delete All Products
+                    </button>
+                </div>
+            </div>
+
+            <!-- Page Info -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Page Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Current Page</dt>
+                        <dd>@(_currentPage + 1)</dd>
+                        <dt>Items on Page</dt>
+                        <dd>@(_products?.Count ?? 0)</dd>
+                        <dt>Total Items</dt>
+                        <dd>@_totalCount</dd>
+                        <dt>Order By</dt>
+                        <dd>@_orderBy</dd>
+                        @if (_lastCursor is not null)
+                        {
+                            <dt>Last Cursor Value</dt>
+                            <dd><code>@_lastCursor</code></dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products List -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        Products
+                        @if (!string.IsNullOrEmpty(_filterCategory))
+                        {
+                            <span class="badge bg-info">@_filterCategory</span>
+                        }
+                    </h5>
+                    <span class="text-muted">Ordered by @_orderBy</span>
+                </div>
+                <div class="card-body">
+                    @if (_products is null)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_products.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            No products found. Add sample data to see pagination in action.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th class="@(_orderBy == "Name" ? "table-primary" : "")">
+                                            Name
+                                            @if (_orderBy == "Name")
+                                            {
+                                                <span class="ms-1">@(_orderDirection == "asc" ? "^" : "v")</span>
+                                            }
+                                        </th>
+                                        <th>Category</th>
+                                        <th class="text-end @(_orderBy == "Price" ? "table-primary" : "")">
+                                            Price
+                                            @if (_orderBy == "Price")
+                                            {
+                                                <span class="ms-1">@(_orderDirection == "asc" ? "^" : "v")</span>
+                                            }
+                                        </th>
+                                        <th class="text-end @(_orderBy == "Stock" ? "table-primary" : "")">
+                                            Stock
+                                            @if (_orderBy == "Stock")
+                                            {
+                                                <span class="ms-1">@(_orderDirection == "asc" ? "^" : "v")</span>
+                                            }
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var index = _currentPage * _pageSize;
+                                    }
+                                    @foreach (var product in _products)
+                                    {
+                                        index++;
+                                        <tr>
+                                            <td class="text-muted">@index</td>
+                                            <td>@product.Data?.Name</td>
+                                            <td><span class="badge bg-secondary">@product.Data?.Category</span></td>
+                                            <td class="text-end">$@product.Data?.Price.ToString("N2")</td>
+                                            <td class="text-end">@product.Data?.Stock</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination Controls -->
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-outline-primary" @onclick="GoToFirstPage"
+                                disabled="@(_isLoading || _currentPage == 0)">
+                            First
+                        </button>
+
+                        <button class="btn btn-outline-primary" @onclick="GoToPreviousPage"
+                                disabled="@(_isLoading || _currentPage == 0)">
+                            Previous
+                        </button>
+
+                        <span class="text-muted">
+                            Page @(_currentPage + 1) of @Math.Max(1, (int)Math.Ceiling((double)_totalCount / _pageSize))
+                        </span>
+
+                        <button class="btn btn-outline-primary" @onclick="GoToNextPage"
+                                disabled="@(_isLoading || !_hasMorePages)">
+                            Next
+                        </button>
+
+                        @* "Last" button removed: Cursor pagination doesn't support efficient random access.
+                           Going to the last page would require iterating through all pages sequentially,
+                           which defeats the purpose of cursor pagination's efficiency benefits. *@
+                        <span class="btn btn-outline-secondary disabled" title="Cursor pagination doesn't support jump to last page">
+                            Last
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Example -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Code Example</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-dark text-light p-3 rounded"><code>// Cursor-based pagination example
+var collection = Firebase.Firestore.Collection&lt;Product&gt;("products");
+
+// First page (ascending order)
+var firstPage = await collection
+    .OrderBy(p => p.Price)
+    .Take(10)
+    .GetAsync();
+
+// Get cursor value from last item
+var lastItem = firstPage.Value.Last();
+var cursorValue = lastItem.Data!.Price;
+
+// Next page using StartAfter (excludes cursor value)
+var nextPage = await collection
+    .OrderBy(p => p.Price)
+    .StartAfter(cursorValue)  // Items with Price &gt; cursorValue
+    .Take(10)
+    .GetAsync();
+
+// ============================================
+// All Four Cursor Methods Demonstrated
+// ============================================
+
+// StartAt - Include items &gt;= value (inclusive start)
+var startAtPage = await collection
+    .OrderBy(p => p.Price)
+    .StartAt(50.00m)  // Include products priced $50 and above
+    .Take(10)
+    .GetAsync();
+
+// StartAfter - Include items &gt; value (exclusive start)
+var startAfterPage = await collection
+    .OrderBy(p => p.Price)
+    .StartAfter(50.00m)  // Exclude $50, start from next price
+    .Take(10)
+    .GetAsync();
+
+// EndAt - Include items &lt;= value (inclusive end)
+var endAtPage = await collection
+    .OrderBy(p => p.Price)
+    .EndAt(100.00m)  // Include products up to and including $100
+    .Take(10)
+    .GetAsync();
+
+// EndBefore - Include items &lt; value (exclusive end)
+var endBeforePage = await collection
+    .OrderBy(p => p.Price)
+    .EndBefore(100.00m)  // Exclude $100, stop before it
+    .Take(10)
+    .GetAsync();
+
+// Combining cursors for a range
+var rangeQuery = await collection
+    .OrderBy(p => p.Price)
+    .StartAt(25.00m)     // From $25 (inclusive)
+    .EndBefore(100.00m)  // To $100 (exclusive)
+    .Take(10)
+    .GetAsync();
+
+// Descending order with cursors
+var descPage = await collection
+    .OrderByDescending(p => p.Price)
+    .StartAfter(500.00m)  // Items with Price &lt; 500 (descending)
+    .Take(10)
+    .GetAsync();</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DocumentSnapshot<Product>>? _products;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isLoading;
+
+    // Pagination state
+    private int _pageSize = 5;
+    private int _currentPage = 0;
+    private string _orderBy = "Name";
+    private string _orderDirection = "asc";
+    private string _filterCategory = "";
+    private bool _hasMorePages;
+    private long _totalCount;
+    private object? _lastCursor;
+
+    // Page history for backwards navigation
+    private List<object?> _pageStartCursors = new() { null };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadTotalCount();
+        await LoadCurrentPage();
+    }
+
+    private async Task ResetAndLoad()
+    {
+        _currentPage = 0;
+        _pageStartCursors = new List<object?> { null };
+        _lastCursor = null;
+        await LoadTotalCount();
+        await LoadCurrentPage();
+    }
+
+    private async Task LoadTotalCount()
+    {
+        var query = GetBaseQuery();
+        var countResult = await query.Aggregate().CountAsync();
+        if (countResult.IsSuccess)
+        {
+            _totalCount = countResult.Value;
+        }
+    }
+
+    private ICollectionReference<Product> GetBaseQuery()
+    {
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        if (!string.IsNullOrEmpty(_filterCategory))
+        {
+            collection = collection.Where(p => p.Category == _filterCategory);
+        }
+
+        return collection;
+    }
+
+    private async Task LoadCurrentPage()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        var query = GetBaseQuery();
+
+        // Apply ordering
+        query = _orderBy switch
+        {
+            "Price" => _orderDirection == "asc"
+                ? query.OrderBy(p => p.Price)
+                : query.OrderByDescending(p => p.Price),
+            "Stock" => _orderDirection == "asc"
+                ? query.OrderBy(p => p.Stock)
+                : query.OrderByDescending(p => p.Stock),
+            _ => _orderDirection == "asc"
+                ? query.OrderBy(p => p.Name)
+                : query.OrderByDescending(p => p.Name)
+        };
+
+        // Apply cursor if not first page
+        if (_currentPage > 0 && _currentPage < _pageStartCursors.Count)
+        {
+            var cursor = _pageStartCursors[_currentPage];
+            if (cursor is not null)
+            {
+                query = query.StartAfter(cursor);
+            }
+        }
+
+        // Take one extra to check if there are more pages
+        var result = await query.Take(_pageSize + 1).GetAsync();
+
+        if (result.IsSuccess)
+        {
+            var items = result.Value.ToList();
+            _hasMorePages = items.Count > _pageSize;
+
+            // Remove the extra item if present
+            if (_hasMorePages && items.Count > _pageSize)
+            {
+                items = items.Take(_pageSize).ToList();
+            }
+
+            _products = items;
+
+            // Store cursor for next page
+            if (items.Count > 0)
+            {
+                var lastItem = items.Last();
+                _lastCursor = _orderBy switch
+                {
+                    "Price" => (object?)lastItem.Data?.Price,
+                    "Stock" => lastItem.Data?.Stock,
+                    _ => lastItem.Data?.Name
+                };
+
+                // Store this cursor for future navigation
+                if (_currentPage + 1 >= _pageStartCursors.Count)
+                {
+                    _pageStartCursors.Add(_lastCursor);
+                }
+            }
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to load products";
+            _products = new List<DocumentSnapshot<Product>>();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task GoToFirstPage()
+    {
+        _currentPage = 0;
+        await LoadCurrentPage();
+    }
+
+    private async Task GoToPreviousPage()
+    {
+        if (_currentPage > 0)
+        {
+            _currentPage--;
+            await LoadCurrentPage();
+        }
+    }
+
+    private async Task GoToNextPage()
+    {
+        if (_hasMorePages)
+        {
+            _currentPage++;
+            await LoadCurrentPage();
+        }
+    }
+
+    // GoToLastPage intentionally removed: Cursor pagination doesn't support efficient random access.
+    // Iterating through all pages to reach the last one defeats the purpose of cursor-based pagination.
+    // Users should navigate sequentially using Previous/Next buttons.
+
+    private async Task AddSampleData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var categories = new[] { "Electronics", "Clothing", "Food", "Books" };
+        var random = new Random();
+        var sampleProducts = new List<Product>();
+
+        for (int i = 1; i <= 20; i++)
+        {
+            sampleProducts.Add(new Product
+            {
+                Name = $"Product {i:D3}",
+                Category = categories[random.Next(categories.Length)],
+                Price = Math.Round((decimal)(random.NextDouble() * 500 + 10), 2),
+                Stock = random.Next(1, 100)
+            });
+        }
+
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var product in sampleProducts)
+            {
+                var doc = collection.Document(Guid.NewGuid().ToString("N")[..8]);
+                batch.Set(doc, product);
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Added {sampleProducts.Count} sample products!";
+            await ResetAndLoad();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to add sample data";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteAllProducts()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        // Get all products (not just current page)
+        var allProductsResult = await Firebase.Firestore
+            .Collection<Product>("demo-products")
+            .GetAsync();
+
+        if (!allProductsResult.IsSuccess)
+        {
+            _errorMessage = allProductsResult.Error?.Message ?? "Failed to fetch products";
+            _isLoading = false;
+            return;
+        }
+
+        var allProducts = allProductsResult.Value.ToList();
+        if (allProducts.Count == 0)
+        {
+            _successMessage = "No products to delete";
+            _isLoading = false;
+            return;
+        }
+
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var product in allProducts)
+            {
+                batch.Delete(collection.Document(product.Id));
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Deleted {allProducts.Count} products!";
+            await ResetAndLoad();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to delete products";
+        }
+
+        _isLoading = false;
+    }
+
+    public class Product
+    {
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Category { get; set; } = "";
+        public int Stock { get; set; }
+    }
+}

@@ -1,0 +1,172 @@
+@page "/ai-demo"
+@inject IFirebase Firebase
+
+<PageTitle>AI Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firebase AI Logic Demo</h2>
+    <p class="text-muted">Generate text content using Gemini AI models.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Prompt</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="systemInstruction" class="form-label">System Instruction (optional)</label>
+                        <input type="text" id="systemInstruction" class="form-control"
+                               @bind="_systemInstruction"
+                               placeholder="e.g., You are a helpful coding assistant" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label">Your Prompt</label>
+                        <textarea id="prompt" class="form-control" rows="4"
+                                  @bind="_prompt"
+                                  placeholder="Ask anything..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useStreaming"
+                                   @bind="_useStreaming" />
+                            <label class="form-check-label" for="useStreaming">
+                                Use streaming (real-time response)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" @onclick="GenerateAsync" disabled="@_isGenerating">
+                            @if (_isGenerating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Generating...</text>
+                            }
+                            else
+                            {
+                                <text>Generate</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Response</h5>
+                    @if (!string.IsNullOrEmpty(_response))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearResponse">
+                            Clear
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (string.IsNullOrEmpty(_response))
+                    {
+                        <p class="text-muted mb-0">Response will appear here...</p>
+                    }
+                    else
+                    {
+                        <div class="response-content" style="white-space: pre-wrap;">@_response</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _prompt = "";
+    private string _systemInstruction = "";
+    private string _response = "";
+    private string? _errorMessage;
+    private bool _isGenerating;
+    private bool _useStreaming = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+    }
+
+    private async Task GenerateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Please enter a prompt";
+            return;
+        }
+
+        _isGenerating = true;
+        _errorMessage = null;
+        _response = "";
+
+        try
+        {
+            var config = string.IsNullOrWhiteSpace(_systemInstruction) ? null : new GenerationConfig
+            {
+                SystemInstruction = _systemInstruction
+            };
+
+            var model = Firebase.AI.GetModel("gemini-2.5-flash", config);
+
+            if (_useStreaming)
+            {
+                await foreach (var chunk in model.GenerateContentStreamAsync(_prompt))
+                {
+                    if (chunk.IsSuccess)
+                    {
+                        if (!chunk.Value.IsFinal)
+                        {
+                            _response += chunk.Value.Text;
+                            StateHasChanged();
+                        }
+                    }
+                    else
+                    {
+                        _errorMessage = chunk.Error?.Message ?? "Stream error occurred";
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                var result = await model.GenerateContentAsync(_prompt);
+                if (result.IsSuccess)
+                {
+                    _response = result.Value.Text;
+                }
+                else
+                {
+                    _errorMessage = result.Error?.Message ?? "Generation failed";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private void ClearResponse()
+    {
+        _response = "";
+    }
+}

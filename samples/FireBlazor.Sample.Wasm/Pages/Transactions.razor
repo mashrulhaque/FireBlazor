@@ -1,0 +1,352 @@
+@page "/transactions"
+@inject IFirebase Firebase
+
+<PageTitle>Transactions - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Transaction Operations</h2>
+    <p class="text-muted">Demonstrate Firestore transactions with a bank transfer example. Transactions ensure atomicity and consistency.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    @if (_accountA is null || _accountB is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading accounts...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- Account A -->
+            <div class="col-md-4">
+                <div class="card h-100 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">@_accountA.Name</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="display-4 text-primary mb-2">$@_accountA.Balance.ToString("N2")</div>
+                        <p class="text-muted">Current Balance</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transfer Form -->
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Transfer Money</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">From Account:</label>
+                            <select class="form-select" @bind="_transferFrom">
+                                <option value="A">@_accountA.Name</option>
+                                <option value="B">@_accountB.Name</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">To Account:</label>
+                            <select class="form-select" @bind="_transferTo">
+                                <option value="B">@_accountB.Name</option>
+                                <option value="A">@_accountA.Name</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Amount:</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" @bind="_transferAmount"
+                                       min="0.01" step="0.01" />
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success w-100" @onclick="TransferMoney"
+                                disabled="@(_isLoading || _transferAmount <= 0 || _transferFrom == _transferTo)">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Transfer
+                        </button>
+
+                        @if (_transferFrom == _transferTo)
+                        {
+                            <div class="alert alert-warning mt-2 mb-0 small">
+                                Cannot transfer to the same account
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account B -->
+            <div class="col-md-4">
+                <div class="card h-100 border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">@_accountB.Name</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="display-4 text-success mb-2">$@_accountB.Balance.ToString("N2")</div>
+                        <p class="text-muted">Current Balance</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Transaction Log</h5>
+            </div>
+            <div class="card-body">
+                @if (_transactionLog.Count == 0)
+                {
+                    <p class="text-muted mb-0">No transactions yet. Make a transfer to see the transaction log.</p>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var log in _transactionLog.AsEnumerable().Reverse())
+                        {
+                            <div class="list-group-item @(log.Success ? "" : "list-group-item-danger")">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        @if (log.Success)
+                                        {
+                                            <span class="badge bg-success me-2">Success</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger me-2">Failed</span>
+                                        }
+                                        @log.Message
+                                    </h6>
+                                    <small class="text-muted">@log.Timestamp.ToString("HH:mm:ss")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="mt-4 text-center">
+            <button class="btn btn-outline-secondary" @onclick="ResetAccounts" disabled="@_isLoading">
+                Reset Accounts to $1000 Each
+            </button>
+        </div>
+
+        <!-- Code Example -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Code Example</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded"><code>// Transaction example - atomic read-modify-write
+var result = await Firebase.Firestore.TransactionAsync(async tx =>
+{
+    // Read both accounts inside the transaction
+    var accountASnap = await tx.GetAsync(accountADoc);
+    var accountBSnap = await tx.GetAsync(accountBDoc);
+
+    var balanceA = accountASnap.Value.Data!.Balance;
+    var balanceB = accountBSnap.Value.Data!.Balance;
+
+    // Validate the transfer
+    if (balanceA &lt; transferAmount)
+        throw new InvalidOperationException("Insufficient funds");
+
+    // Update both accounts atomically
+    tx.Update(accountADoc, new { Balance = balanceA - transferAmount });
+    tx.Update(accountBDoc, new { Balance = balanceB + transferAmount });
+
+    return "Transfer successful";
+});</code></pre>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private const string AccountAId = "account-a";
+    private const string AccountBId = "account-b";
+
+    private BankAccount? _accountA;
+    private BankAccount? _accountB;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isLoading;
+    private string _transferFrom = "A";
+    private string _transferTo = "B";
+    private decimal _transferAmount = 100;
+    private List<TransactionLogEntry> _transactionLog = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadOrCreateAccounts();
+    }
+
+    private async Task LoadOrCreateAccounts()
+    {
+        _isLoading = true;
+
+        var collection = Firebase.Firestore.Collection<BankAccount>("bank-accounts");
+
+        // Load Account A
+        var resultA = await collection.Document(AccountAId).GetAsync();
+        if (resultA.IsSuccess && resultA.Value.Exists && resultA.Value.Data is not null)
+        {
+            _accountA = resultA.Value.Data;
+        }
+        else
+        {
+            _accountA = new BankAccount { Name = "Checking Account", Balance = 1000m };
+            await collection.Document(AccountAId).SetAsync(_accountA);
+        }
+
+        // Load Account B
+        var resultB = await collection.Document(AccountBId).GetAsync();
+        if (resultB.IsSuccess && resultB.Value.Exists && resultB.Value.Data is not null)
+        {
+            _accountB = resultB.Value.Data;
+        }
+        else
+        {
+            _accountB = new BankAccount { Name = "Savings Account", Balance = 1000m };
+            await collection.Document(AccountBId).SetAsync(_accountB);
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task TransferMoney()
+    {
+        if (_transferAmount <= 0 || _transferFrom == _transferTo) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<BankAccount>("bank-accounts");
+        var fromDocId = _transferFrom == "A" ? AccountAId : AccountBId;
+        var toDocId = _transferTo == "A" ? AccountAId : AccountBId;
+        var fromDoc = collection.Document(fromDocId);
+        var toDoc = collection.Document(toDocId);
+        var fromName = _transferFrom == "A" ? _accountA!.Name : _accountB!.Name;
+        var toName = _transferTo == "A" ? _accountA!.Name : _accountB!.Name;
+
+        var result = await Firebase.Firestore.TransactionAsync<string>(async tx =>
+        {
+            // Read both accounts inside the transaction
+            var fromSnap = await tx.GetAsync(fromDoc);
+            var toSnap = await tx.GetAsync(toDoc);
+
+            if (!fromSnap.IsSuccess || fromSnap.Value.Data is null)
+                throw new InvalidOperationException("Source account not found");
+            if (!toSnap.IsSuccess || toSnap.Value.Data is null)
+                throw new InvalidOperationException("Destination account not found");
+
+            var fromBalance = fromSnap.Value.Data.Balance;
+            var toBalance = toSnap.Value.Data.Balance;
+
+            // Validate the transfer
+            if (fromBalance < _transferAmount)
+                throw new InvalidOperationException($"Insufficient funds. {fromName} has ${fromBalance:N2} but tried to transfer ${_transferAmount:N2}");
+
+            // Update both accounts atomically
+            tx.Update(fromDoc, new { Balance = fromBalance - _transferAmount });
+            tx.Update(toDoc, new { Balance = toBalance + _transferAmount });
+
+            return $"Transferred ${_transferAmount:N2} from {fromName} to {toName}";
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = result.Value;
+            _transactionLog.Add(new TransactionLogEntry
+            {
+                Success = true,
+                Message = result.Value,
+                Timestamp = DateTime.Now
+            });
+            await LoadOrCreateAccounts();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Transfer failed";
+            _transactionLog.Add(new TransactionLogEntry
+            {
+                Success = false,
+                Message = result.Error?.Message ?? "Transfer failed",
+                Timestamp = DateTime.Now
+            });
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task ResetAccounts()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<BankAccount>("bank-accounts");
+
+        _accountA = new BankAccount { Name = "Checking Account", Balance = 1000m };
+        _accountB = new BankAccount { Name = "Savings Account", Balance = 1000m };
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            batch.Set(collection.Document(AccountAId), _accountA);
+            batch.Set(collection.Document(AccountBId), _accountB);
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Accounts reset to $1000 each";
+            _transactionLog.Clear();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Reset failed";
+        }
+
+        _isLoading = false;
+    }
+
+    public class BankAccount
+    {
+        public string Name { get; set; } = "";
+        public decimal Balance { get; set; }
+    }
+
+    private class TransactionLogEntry
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+}

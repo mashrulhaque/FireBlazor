@@ -1,0 +1,175 @@
+@page "/imagen-demo"
+@inject IFirebase Firebase
+
+<PageTitle>Imagen Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Imagen Image Generation Demo</h2>
+    <p class="text-muted">Generate images from text prompts using Firebase AI Logic (Imagen).</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Image Prompt</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label">Describe the image you want</label>
+                        <textarea id="prompt" class="form-control" rows="3"
+                                  @bind="_prompt"
+                                  placeholder="e.g., A serene mountain landscape at sunset with a calm lake reflecting the orange sky"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="negativePrompt" class="form-label">Negative Prompt (optional)</label>
+                        <input type="text" id="negativePrompt" class="form-control"
+                               @bind="_negativePrompt"
+                               placeholder="e.g., blurry, low quality, distorted" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="numberOfImages" class="form-label">Number of Images</label>
+                            <select id="numberOfImages" class="form-select" @bind="_numberOfImages">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="aspectRatio" class="form-label">Aspect Ratio</label>
+                            <select id="aspectRatio" class="form-select" @bind="_aspectRatio">
+                                <option value="1:1">1:1 (Square)</option>
+                                <option value="16:9">16:9 (Landscape)</option>
+                                <option value="9:16">9:16 (Portrait)</option>
+                                <option value="4:3">4:3</option>
+                                <option value="3:4">3:4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" @onclick="GenerateImagesAsync" disabled="@_isGenerating">
+                            @if (_isGenerating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <text>Generating...</text>
+                            }
+                            else
+                            {
+                                <text>Generate Images</text>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Generated Images</h5>
+                    @if (_generatedImages.Any())
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearImages">
+                            Clear
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (!_generatedImages.Any())
+                    {
+                        <p class="text-muted mb-0">Generated images will appear here...</p>
+                    }
+                    else
+                    {
+                        <div class="row g-2">
+                            @foreach (var image in _generatedImages)
+                            {
+                                <div class="col-6">
+                                    <img src="@image.ToDataUrl()"
+                                         class="img-fluid rounded"
+                                         alt="Generated image"
+                                         style="width: 100%; height: auto;" />
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _prompt = "";
+    private string _negativePrompt = "";
+    private int _numberOfImages = 1;
+    private string _aspectRatio = "1:1";
+    private string? _errorMessage;
+    private bool _isGenerating;
+    private List<GeneratedImage> _generatedImages = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+    }
+
+    private async Task GenerateImagesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Please enter a prompt describing the image you want";
+            return;
+        }
+
+        _isGenerating = true;
+        _errorMessage = null;
+        _generatedImages.Clear();
+
+        try
+        {
+            var config = new ImageGenerationConfig
+            {
+                NumberOfImages = _numberOfImages,
+                AspectRatio = _aspectRatio,
+                NegativePrompt = string.IsNullOrWhiteSpace(_negativePrompt) ? null : _negativePrompt
+            };
+
+            var model = Firebase.AI.GetImageModel();
+            var result = await model.GenerateImagesAsync(_prompt, config);
+
+            if (result.IsSuccess)
+            {
+                _generatedImages = result.Value.Images.ToList();
+            }
+            else
+            {
+                _errorMessage = result.Error?.Message ?? "Image generation failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private void ClearImages()
+    {
+        _generatedImages.Clear();
+    }
+}

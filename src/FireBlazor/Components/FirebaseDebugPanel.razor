@@ -1,0 +1,333 @@
+@namespace FireBlazor.Components
+@implements IDisposable
+
+<div class="firebase-debug-panel @(IsExpanded ? "expanded" : "collapsed")">
+    <div class="debug-header" @onclick="TogglePanel">
+        <span class="debug-title">Firebase Debug</span>
+        <span class="debug-toggle">@(IsExpanded ? "▼" : "▶")</span>
+    </div>
+
+    @if (IsExpanded)
+    {
+        <div class="debug-content">
+            <!-- Auth State Section -->
+            <div class="debug-section">
+                <h4>Auth State</h4>
+                @if (_debugState.IsAuthenticated)
+                {
+                    <div class="auth-info">
+                        <span class="status-badge authenticated">Authenticated</span>
+                        <div class="user-details">
+                            <strong>UID:</strong> @_debugState.CurrentUser?.Uid<br/>
+                            <strong>Email:</strong> @(_debugState.CurrentUser?.Email ?? "N/A")<br/>
+                            <strong>Display Name:</strong> @(_debugState.CurrentUser?.DisplayName ?? "N/A")
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <span class="status-badge unauthenticated">Not Authenticated</span>
+                }
+            </div>
+
+            <!-- Subscriptions Section -->
+            <div class="debug-section">
+                <h4>Active Subscriptions</h4>
+                <span class="subscription-count">@_debugState.ActiveSubscriptionCount</span>
+            </div>
+
+            <!-- Recent Operations Section -->
+            <div class="debug-section">
+                <h4>Recent Operations (@_debugState.RecentOperations.Count)</h4>
+                <div class="operations-list">
+                    @foreach (var op in _debugState.RecentOperations.Take(MaxDisplayedOperations))
+                    {
+                        <div class="operation-item @(op.Success ? "success" : "failure")">
+                            <span class="op-service">@op.Service</span>
+                            <span class="op-action">@op.Action</span>
+                            <span class="op-duration">@op.Duration.TotalMilliseconds.ToString("F1")ms</span>
+                            <span class="op-status">@(op.Success ? "✓" : "✗")</span>
+                        </div>
+                    }
+                    @if (_debugState.RecentOperations.Count == 0)
+                    {
+                        <div class="no-data">No operations recorded</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Recent Errors Section -->
+            <div class="debug-section">
+                <h4>Recent Errors (@_debugState.RecentErrors.Count)</h4>
+                <div class="errors-list">
+                    @foreach (var error in _debugState.RecentErrors.Take(MaxDisplayedErrors))
+                    {
+                        <div class="error-item">
+                            <span class="error-code">@error.Code</span>
+                            <span class="error-message">@error.Message</span>
+                        </div>
+                    }
+                    @if (_debugState.RecentErrors.Count == 0)
+                    {
+                        <div class="no-data">No errors recorded</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="debug-actions">
+                <button @onclick="ClearHistory">Clear History</button>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .firebase-debug-panel {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background: #1a1a2e;
+        color: #eee;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        z-index: 9999;
+        max-width: 400px;
+        min-width: 200px;
+    }
+
+    .debug-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        cursor: pointer;
+        background: #16213e;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #0f3460;
+    }
+
+    .collapsed .debug-header {
+        border-radius: 8px;
+    }
+
+    .debug-title {
+        font-weight: bold;
+        color: #e94560;
+    }
+
+    .debug-toggle {
+        color: #888;
+    }
+
+    .debug-content {
+        padding: 10px 15px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .debug-section {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #0f3460;
+    }
+
+    .debug-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .debug-section h4 {
+        margin: 0 0 8px 0;
+        color: #e94560;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .authenticated {
+        background: #2e7d32;
+        color: white;
+    }
+
+    .unauthenticated {
+        background: #c62828;
+        color: white;
+    }
+
+    .user-details {
+        margin-top: 8px;
+        padding: 8px;
+        background: #0f3460;
+        border-radius: 4px;
+        font-size: 11px;
+    }
+
+    .subscription-count {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4caf50;
+    }
+
+    .operations-list, .errors-list {
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .operation-item {
+        display: flex;
+        gap: 8px;
+        padding: 4px 6px;
+        margin-bottom: 2px;
+        border-radius: 3px;
+        background: #0f3460;
+    }
+
+    .operation-item.success {
+        border-left: 3px solid #4caf50;
+    }
+
+    .operation-item.failure {
+        border-left: 3px solid #f44336;
+    }
+
+    .op-service {
+        color: #64b5f6;
+        min-width: 60px;
+    }
+
+    .op-action {
+        flex: 1;
+        color: #ddd;
+    }
+
+    .op-duration {
+        color: #888;
+    }
+
+    .op-status {
+        min-width: 16px;
+        text-align: center;
+    }
+
+    .error-item {
+        padding: 6px;
+        margin-bottom: 4px;
+        background: #3d1515;
+        border-left: 3px solid #f44336;
+        border-radius: 3px;
+    }
+
+    .error-code {
+        display: block;
+        color: #f44336;
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+
+    .error-message {
+        color: #ccc;
+        font-size: 11px;
+    }
+
+    .no-data {
+        color: #666;
+        font-style: italic;
+        padding: 8px;
+    }
+
+    .debug-actions {
+        margin-top: 10px;
+    }
+
+    .debug-actions button {
+        background: #e94560;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    .debug-actions button:hover {
+        background: #ff6b8a;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public bool IsExpanded { get; set; } = true;
+
+    [Parameter]
+    public int MaxDisplayedOperations { get; set; } = 10;
+
+    [Parameter]
+    public int MaxDisplayedErrors { get; set; } = 5;
+
+    [Inject]
+    private IFirebase Firebase { get; set; } = default!;
+
+    private FirebaseDebugState _debugState = new();
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to Firebase events
+        Firebase.OnOperation += HandleOperation;
+        Firebase.OnError += HandleError;
+        Firebase.Auth.OnAuthStateChanged += HandleAuthStateChanged;
+
+        // Initialize current auth state
+        _debugState.UpdateAuthState(Firebase.Auth.CurrentUser);
+
+        // Subscribe to debug state changes
+        _debugState.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleOperation(FirebaseOperation operation)
+    {
+        _debugState.AddOperation(operation);
+    }
+
+    private void HandleError(FirebaseException error)
+    {
+        _debugState.AddError(error);
+    }
+
+    private void HandleAuthStateChanged(FirebaseUser? user)
+    {
+        _debugState.UpdateAuthState(user);
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void TogglePanel()
+    {
+        IsExpanded = !IsExpanded;
+    }
+
+    private void ClearHistory()
+    {
+        _debugState.Clear();
+    }
+
+    public void Dispose()
+    {
+        Firebase.OnOperation -= HandleOperation;
+        Firebase.OnError -= HandleError;
+        Firebase.Auth.OnAuthStateChanged -= HandleAuthStateChanged;
+        _debugState.OnStateChanged -= HandleStateChanged;
+    }
+}

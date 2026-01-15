@@ -1,0 +1,520 @@
+@page "/aggregates"
+@inject IFirebase Firebase
+
+<PageTitle>Aggregate Queries - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Aggregate Query Operations</h2>
+    <p class="text-muted">Demonstrate Firestore aggregate queries: Count, Sum, and Average operations.</p>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @_errorMessage
+            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @_successMessage
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Add Product Form -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Add Product</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="_newProduct" OnValidSubmit="AddProduct">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <InputText class="form-control" @bind-Value="_newProduct.Name" placeholder="Product name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <InputSelect class="form-select" @bind-Value="_newProduct.Category">
+                                <option value="">Select category...</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Clothing">Clothing</option>
+                                <option value="Food">Food</option>
+                                <option value="Books">Books</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <InputNumber class="form-control" @bind-Value="_newProduct.Price" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Stock</label>
+                            <InputNumber class="form-control" @bind-Value="_newProduct.Stock" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Add Product
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Quick Add Sample Data -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <button class="btn btn-outline-secondary w-100" @onclick="AddSampleData" disabled="@_isLoading">
+                        Add Sample Products
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aggregates Display -->
+        <div class="col-md-8">
+            <!-- Filter -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label">Filter by Category:</label>
+                            <select class="form-select" @bind="_filterCategory" @bind:after="LoadAggregates">
+                                <option value="">All Categories</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Clothing">Clothing</option>
+                                <option value="Food">Food</option>
+                                <option value="Books">Books</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-primary" @onclick="LoadAggregates" disabled="@_isLoading">
+                                Refresh Aggregates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aggregate Cards -->
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">COUNT</h6>
+                            @if (_aggregatesLoading)
+                            {
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            }
+                            else
+                            {
+                                <div class="display-4 text-primary">@_count</div>
+                            }
+                            <p class="text-muted small mb-0">Total Products</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">SUM (Price)</h6>
+                            @if (_aggregatesLoading)
+                            {
+                                <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+                            }
+                            else
+                            {
+                                <div class="display-4 text-success">$@_sumPrice.ToString("N2")</div>
+                            }
+                            <p class="text-muted small mb-0">Total Value</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">AVERAGE (Price)</h6>
+                            @if (_aggregatesLoading)
+                            {
+                                <div class="spinner-border spinner-border-sm text-info" role="status"></div>
+                            }
+                            else
+                            {
+                                <div class="display-4 text-info">$@(_avgPrice?.ToString("N2") ?? "N/A")</div>
+                            }
+                            <p class="text-muted small mb-0">Avg Price</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">SUM (Stock)</h6>
+                            @if (_aggregatesLoading)
+                            {
+                                <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+                            }
+                            else
+                            {
+                                <div class="display-4 text-warning">@_sumStock</div>
+                            }
+                            <p class="text-muted small mb-0">Total Units</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">AVERAGE (Stock)</h6>
+                            @if (_aggregatesLoading)
+                            {
+                                <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                            }
+                            else
+                            {
+                                <div class="display-4 text-secondary">@(_avgStock?.ToString("N1") ?? "N/A")</div>
+                            }
+                            <p class="text-muted small mb-0">Avg Stock</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products List -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Products @(string.IsNullOrEmpty(_filterCategory) ? "" : $"({_filterCategory})")</h5>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="DeleteAllProducts"
+                            disabled="@(_isLoading || (_products?.Count ?? 0) == 0)">
+                        Delete All
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (_products is null)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_products.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            No products found. Add some products to see aggregates.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th class="text-end">Price</th>
+                                        <th class="text-end">Stock</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var product in _products)
+                                    {
+                                        <tr>
+                                            <td>@product.Data?.Name</td>
+                                            <td><span class="badge bg-secondary">@product.Data?.Category</span></td>
+                                            <td class="text-end">$@product.Data?.Price.ToString("N2")</td>
+                                            <td class="text-end">@product.Data?.Stock</td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => DeleteProduct(product.Id)">
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Example -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Code Example</h5>
+        </div>
+        <div class="card-body">
+            <pre class="bg-dark text-light p-3 rounded"><code>// Aggregate query examples
+var collection = Firebase.Firestore.Collection&lt;Product&gt;("products");
+
+// Count all documents
+var countResult = await collection.Aggregate().CountAsync();
+var count = countResult.Value; // e.g., 42
+
+// Sum a numeric field
+var sumResult = await collection.Aggregate().SumAsync("Price");
+var totalValue = sumResult.Value; // e.g., 1234.56
+
+// Average a numeric field
+var avgResult = await collection.Aggregate().AverageAsync("Price");
+var avgPrice = avgResult.Value; // e.g., 29.39 (nullable if no docs)
+
+// Aggregates with filters
+var electronicsCount = await collection
+    .Where(p => p.Category == "Electronics")
+    .Aggregate()
+    .CountAsync();</code></pre>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Product _newProduct = new();
+    private List<DocumentSnapshot<Product>>? _products;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isLoading;
+    private bool _aggregatesLoading;
+    private string _filterCategory = "";
+
+    // Aggregate values
+    private long _count;
+    private double _sumPrice;
+    private double? _avgPrice;
+    private double _sumStock;
+    private double? _avgStock;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadProducts();
+        await LoadAggregates();
+    }
+
+    private ICollectionReference<Product> GetFilteredCollection()
+    {
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        if (!string.IsNullOrEmpty(_filterCategory))
+        {
+            return collection.Where(p => p.Category == _filterCategory);
+        }
+
+        return collection;
+    }
+
+    private async Task LoadProducts()
+    {
+        _isLoading = true;
+
+        var result = await GetFilteredCollection().GetAsync();
+
+        if (result.IsSuccess)
+        {
+            _products = result.Value.ToList();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+            _products = new List<DocumentSnapshot<Product>>();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task LoadAggregates()
+    {
+        _aggregatesLoading = true;
+        StateHasChanged();
+
+        var query = GetFilteredCollection();
+        var aggregate = query.Aggregate();
+
+        // Load all aggregates in parallel
+        var countTask = aggregate.CountAsync();
+        var sumPriceTask = aggregate.SumAsync("Price");
+        var avgPriceTask = aggregate.AverageAsync("Price");
+        var sumStockTask = aggregate.SumAsync("Stock");
+        var avgStockTask = aggregate.AverageAsync("Stock");
+
+        await Task.WhenAll(countTask, sumPriceTask, avgPriceTask, sumStockTask, avgStockTask);
+
+        var countResult = await countTask;
+        if (countResult.IsSuccess) _count = countResult.Value;
+
+        var sumPriceResult = await sumPriceTask;
+        if (sumPriceResult.IsSuccess) _sumPrice = sumPriceResult.Value;
+
+        var avgPriceResult = await avgPriceTask;
+        if (avgPriceResult.IsSuccess) _avgPrice = avgPriceResult.Value;
+
+        var sumStockResult = await sumStockTask;
+        if (sumStockResult.IsSuccess) _sumStock = sumStockResult.Value;
+
+        var avgStockResult = await avgStockTask;
+        if (avgStockResult.IsSuccess) _avgStock = avgStockResult.Value;
+
+        // Also refresh products list when filter changes
+        await LoadProducts();
+
+        _aggregatesLoading = false;
+    }
+
+    private async Task AddProduct()
+    {
+        if (string.IsNullOrWhiteSpace(_newProduct.Name) || string.IsNullOrWhiteSpace(_newProduct.Category))
+        {
+            _errorMessage = "Please fill in all required fields";
+            return;
+        }
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<Product>("demo-products")
+            .AddAsync(_newProduct);
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Product '{_newProduct.Name}' added!";
+            _newProduct = new Product();
+            await LoadProducts();
+            await LoadAggregates();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to add product";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteProduct(string id)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        var result = await Firebase.Firestore
+            .Collection<Product>("demo-products")
+            .Document(id)
+            .DeleteAsync();
+
+        if (result.IsSuccess)
+        {
+            await LoadProducts();
+            await LoadAggregates();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to delete product";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteAllProducts()
+    {
+        if (_products is null || _products.Count == 0) return;
+
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var product in _products)
+            {
+                batch.Delete(collection.Document(product.Id));
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "All products deleted!";
+            await LoadProducts();
+            await LoadAggregates();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to delete products";
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task AddSampleData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var sampleProducts = new List<Product>
+        {
+            new() { Name = "Laptop", Category = "Electronics", Price = 999.99m, Stock = 15 },
+            new() { Name = "Smartphone", Category = "Electronics", Price = 699.99m, Stock = 25 },
+            new() { Name = "Headphones", Category = "Electronics", Price = 149.99m, Stock = 50 },
+            new() { Name = "T-Shirt", Category = "Clothing", Price = 29.99m, Stock = 100 },
+            new() { Name = "Jeans", Category = "Clothing", Price = 59.99m, Stock = 75 },
+            new() { Name = "Sneakers", Category = "Clothing", Price = 89.99m, Stock = 40 },
+            new() { Name = "Coffee Beans", Category = "Food", Price = 14.99m, Stock = 200 },
+            new() { Name = "Chocolate Bar", Category = "Food", Price = 3.99m, Stock = 500 },
+            new() { Name = "Programming Book", Category = "Books", Price = 49.99m, Stock = 30 },
+            new() { Name = "Novel", Category = "Books", Price = 19.99m, Stock = 60 },
+        };
+
+        var collection = Firebase.Firestore.Collection<Product>("demo-products");
+
+        var result = await Firebase.Firestore.BatchAsync(batch =>
+        {
+            foreach (var product in sampleProducts)
+            {
+                var doc = collection.Document(Guid.NewGuid().ToString("N")[..8]);
+                batch.Set(doc, product);
+            }
+        });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"Added {sampleProducts.Count} sample products!";
+            await LoadProducts();
+            await LoadAggregates();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message ?? "Failed to add sample data";
+        }
+
+        _isLoading = false;
+    }
+
+    public class Product
+    {
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Category { get; set; } = "";
+        public int Stock { get; set; }
+    }
+}

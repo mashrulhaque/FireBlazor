@@ -1,0 +1,223 @@
+@page "/crud"
+@inject IFirebase Firebase
+
+<PageTitle>CRUD Demo - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firestore CRUD Operations</h2>
+    <p class="text-muted">Create, Read, Update, and Delete items in Firestore.</p>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Add New Item</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="_newItem" OnValidSubmit="AddItem">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <InputText id="title" class="form-control" @bind-Value="_newItem.Title" placeholder="Enter title" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" class="form-control" @bind-Value="_newItem.Description" rows="3" placeholder="Enter description" />
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox id="completed" class="form-check-input" @bind-Value="_newItem.Completed" />
+                            <label class="form-check-label" for="completed">Completed</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            Add Item
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Items</h5>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="LoadItems" disabled="@_isLoading">
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    @if (_items is null)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_items.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            No items found. Add your first item!
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var item in _items)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">
+                                            @if (item.Data?.Completed == true)
+                                            {
+                                                <span class="text-decoration-line-through text-muted">@item.Data.Title</span>
+                                                <span class="badge bg-success ms-2">Done</span>
+                                            }
+                                            else
+                                            {
+                                                @item.Data?.Title
+                                            }
+                                        </div>
+                                        <small class="text-muted">@item.Data?.Description</small>
+                                        <br />
+                                        <small class="text-muted">ID: @item.Id</small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-success" @onclick="() => ToggleComplete(item)" title="Toggle Complete">
+                                            <span>@(item.Data?.Completed == true ? "Undo" : "Done")</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(item.Id)" title="Delete">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TodoItem _newItem = new();
+    private List<DocumentSnapshot<TodoItem>>? _items;
+    private string? _errorMessage;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _isLoading = true;
+
+        var result = await Firebase.Firestore
+            .Collection<TodoItem>("todos")
+            .GetAsync();
+
+        if (result.IsSuccess)
+        {
+            _items = result.Value.ToList();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+            _items = new List<DocumentSnapshot<TodoItem>>();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task AddItem()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        _newItem.CreatedAt = DateTime.UtcNow;
+        var result = await Firebase.Firestore
+            .Collection<TodoItem>("todos")
+            .AddAsync(_newItem);
+
+        if (result.IsSuccess)
+        {
+            _newItem = new TodoItem();
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task ToggleComplete(DocumentSnapshot<TodoItem> item)
+    {
+        if (item.Data is null) return;
+
+        _isLoading = true;
+
+        var result = await Firebase.Firestore
+            .Collection<TodoItem>("todos")
+            .Document(item.Id)
+            .UpdateAsync(new { Completed = !item.Data.Completed });
+
+        if (result.IsSuccess)
+        {
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task DeleteItem(string id)
+    {
+        _isLoading = true;
+
+        var result = await Firebase.Firestore
+            .Collection<TodoItem>("todos")
+            .Document(id)
+            .DeleteAsync();
+
+        if (result.IsSuccess)
+        {
+            await LoadItems();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isLoading = false;
+    }
+
+    public class TodoItem
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public bool Completed { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+}

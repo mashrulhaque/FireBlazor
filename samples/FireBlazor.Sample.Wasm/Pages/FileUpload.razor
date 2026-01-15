@@ -1,0 +1,644 @@
+@page "/upload"
+@inject IFirebase Firebase
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>File Upload - FireBlazor Sample</PageTitle>
+
+<div class="container mt-4">
+    <h2>Firebase Storage Upload</h2>
+    <p class="text-muted">Upload files to Firebase Cloud Storage.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload File</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @_errorMessage
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @_successMessage
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Select File</label>
+                        <InputFile id="fileInput" class="form-control" OnChange="HandleFileSelected" accept="image/*,.pdf,.doc,.docx" />
+                        <div class="form-text">Supported: Images, PDF, Word documents (max 10MB)</div>
+                    </div>
+
+                    @if (_selectedFile is not null)
+                    {
+                        <div class="mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body py-2">
+                                    <strong>@_selectedFile.Name</strong>
+                                    <span class="text-muted ms-2">@FormatFileSize(_selectedFile.Size)</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (_uploadProgress > 0 && _uploadProgress < 100)
+                    {
+                        <div class="mb-3">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: @_uploadProgress%"
+                                     aria-valuenow="@_uploadProgress"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    @_uploadProgress.ToString("F0")%
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <button class="btn btn-primary w-100" @onclick="UploadFile" disabled="@(_isUploading || _selectedFile is null)">
+                        @if (_isUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Uploading...</span>
+                        }
+                        else
+                        {
+                            <span>Upload to Firebase Storage</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Uploaded Files</h5>
+                    <div>
+                        <span class="badge bg-secondary me-2">Page @(_currentPage + 1)</span>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="LoadFiles" disabled="@_isLoading">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (_uploadedFiles is null)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_uploadedFiles.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            No files uploaded yet.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var file in _uploadedFiles)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>@file.Name</strong>
+                                            @if (file.Metadata is not null && !string.IsNullOrEmpty(file.Metadata.ContentType))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@file.Metadata.ContentType</small>
+                                            }
+                                            @if (!string.IsNullOrEmpty(file.DownloadUrl))
+                                            {
+                                                <br />
+                                                <a href="@file.DownloadUrl" target="_blank" class="small text-primary">
+                                                    Open File
+                                                </a>
+                                            }
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" @onclick="() => ShowMetadata(file)"
+                                                    title="View/Edit Metadata">
+                                                Info
+                                            </button>
+                                            <button class="btn btn-outline-success" @onclick="() => DownloadAsStream(file)"
+                                                    title="Download via GetStreamAsync">
+                                                Stream
+                                            </button>
+                                            <button class="btn btn-outline-danger" @onclick="() => DeleteFile(file.Path)">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(_nextPageToken))
+                        {
+                            <div class="mt-3 text-center">
+                                <button class="btn btn-outline-secondary" @onclick="LoadNextPage" disabled="@_isLoading">
+                                    Load More Files
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Modal -->
+    @if (_showMetadataModal && _selectedFileForMetadata is not null)
+    {
+        <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">File Metadata</h5>
+                        <button type="button" class="btn-close" @onclick="CloseMetadataModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>File:</strong> @_selectedFileForMetadata.Name</p>
+
+                        @if (_selectedFileForMetadata.Metadata is not null)
+                        {
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td>Content Type</td><td>@(_selectedFileForMetadata.Metadata.ContentType ?? "N/A")</td></tr>
+                                    <tr><td>Cache Control</td><td>@(_selectedFileForMetadata.Metadata.CacheControl ?? "N/A")</td></tr>
+                                    <tr><td>Content Disposition</td><td>@(_selectedFileForMetadata.Metadata.ContentDisposition ?? "N/A")</td></tr>
+                                    <tr><td>Content Encoding</td><td>@(_selectedFileForMetadata.Metadata.ContentEncoding ?? "N/A")</td></tr>
+                                </tbody>
+                            </table>
+                        }
+
+                        <hr />
+                        <h6>Update Metadata</h6>
+                        <div class="mb-2">
+                            <label class="form-label small">Cache Control</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_editCacheControl"
+                                   placeholder="e.g., public, max-age=3600" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Content Disposition</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_editContentDisposition"
+                                   placeholder="e.g., attachment; filename=download.txt" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseMetadataModal">Close</button>
+                        <button type="button" class="btn btn-primary" @onclick="UpdateMetadata" disabled="@_isUpdatingMetadata">
+                            @if (_isUpdatingMetadata)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Update Metadata
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Stream Content Modal -->
+    @if (_showStreamModal)
+    {
+        <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Stream Content</h5>
+                        <button type="button" class="btn-close" @onclick="() => _showStreamModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (_isLoadingStream)
+                        {
+                            <div class="text-center">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="mt-2">Loading stream...</p>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(_streamContent))
+                        {
+                            <p class="small text-muted">Content loaded via GetStreamAsync (@_streamContentSize bytes):</p>
+                            <pre class="bg-light p-2 rounded" style="max-height: 300px; overflow: auto;">@_streamContent</pre>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => _showStreamModal = false">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- String Upload Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload String Content</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Upload text content directly without needing a file.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">String Format</label>
+                        <select class="form-select" @bind="_stringFormat">
+                            <option value="@StringFormat.Raw">Raw Text</option>
+                            <option value="@StringFormat.Base64">Base64</option>
+                            <option value="@StringFormat.DataUrl">Data URL</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Content</label>
+                        <textarea class="form-control" rows="4" @bind="_stringContent"
+                                  placeholder="@GetPlaceholder()"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">File Name</label>
+                        <input type="text" class="form-control" @bind="_stringFileName" placeholder="my-content.txt" />
+                    </div>
+
+                    <button class="btn btn-success w-100" @onclick="UploadString"
+                            disabled="@(_isUploadingString || string.IsNullOrWhiteSpace(_stringContent))">
+                        @if (_isUploadingString)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Uploading...</span>
+                        }
+                        else
+                        {
+                            <span>Upload String</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Code Example</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-dark text-light p-3 rounded small mb-0"><code>// Upload raw text
+var result = await storageRef.PutStringAsync(
+    "Hello, World!",
+    StringFormat.Raw);
+
+// Upload Base64 encoded content
+var base64 = Convert.ToBase64String(bytes);
+var result = await storageRef.PutStringAsync(
+    base64,
+    StringFormat.Base64);
+
+// Upload Data URL (e.g., from canvas)
+var dataUrl = "data:text/plain;base64,SGVsbG8=";
+var result = await storageRef.PutStringAsync(
+    dataUrl,
+    StringFormat.DataUrl);</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IBrowserFile? _selectedFile;
+    private List<UploadedFile>? _uploadedFiles = new();
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _isUploading;
+    private bool _isLoading;
+    private double _uploadProgress;
+
+    // String upload fields
+    private string _stringContent = "";
+    private string _stringFileName = "my-content.txt";
+    private StringFormat _stringFormat = StringFormat.Raw;
+    private bool _isUploadingString;
+
+    // Pagination fields
+    private string? _nextPageToken;
+    private int _currentPage = 0;
+    private const int PageSize = 5;
+
+    // Metadata modal fields
+    private bool _showMetadataModal;
+    private UploadedFile? _selectedFileForMetadata;
+    private string _editCacheControl = "";
+    private string _editContentDisposition = "";
+    private bool _isUpdatingMetadata;
+
+    // Stream modal fields
+    private bool _showStreamModal;
+    private bool _isLoadingStream;
+    private string _streamContent = "";
+    private int _streamContentSize;
+
+    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Firebase.InitializeAsync();
+        await LoadFiles();
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _errorMessage = null;
+        _successMessage = null;
+        _uploadProgress = 0;
+
+        if (_selectedFile.Size > MaxFileSize)
+        {
+            _errorMessage = $"File size exceeds the maximum allowed size of {FormatFileSize(MaxFileSize)}.";
+            _selectedFile = null;
+        }
+    }
+
+    private async Task UploadFile()
+    {
+        if (_selectedFile is null) return;
+
+        _isUploading = true;
+        _errorMessage = null;
+        _successMessage = null;
+        _uploadProgress = 0;
+
+        var fileName = $"uploads/{Guid.NewGuid():N}_{_selectedFile.Name}";
+        var storageRef = Firebase.Storage.Ref(fileName);
+
+        var result = await storageRef.PutAsync(
+            _selectedFile,
+            new StorageMetadata { ContentType = _selectedFile.ContentType },
+            progress =>
+            {
+                _uploadProgress = progress.Percentage;
+                InvokeAsync(StateHasChanged);
+            });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "File uploaded successfully!";
+            _uploadedFiles?.Add(new UploadedFile
+            {
+                Name = _selectedFile.Name,
+                Path = result.Value.FullPath,
+                DownloadUrl = result.Value.DownloadUrl
+            });
+            _selectedFile = null;
+            _uploadProgress = 100;
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isUploading = false;
+    }
+
+    private async Task LoadFiles()
+    {
+        _isLoading = true;
+        _currentPage = 0;
+        _nextPageToken = null;
+
+        // Use paginated ListAsync instead of ListAllAsync
+        var result = await Firebase.Storage.Ref("uploads").ListAsync(new ListOptions { MaxResults = PageSize });
+
+        if (result.IsSuccess)
+        {
+            _nextPageToken = result.Value.NextPageToken;
+            _uploadedFiles = await LoadFileDetails(result.Value.Items);
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+            _uploadedFiles = new List<UploadedFile>();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task LoadNextPage()
+    {
+        if (string.IsNullOrEmpty(_nextPageToken)) return;
+
+        _isLoading = true;
+
+        var result = await Firebase.Storage.Ref("uploads").ListAsync(new ListOptions
+        {
+            MaxResults = PageSize,
+            PageToken = _nextPageToken
+        });
+
+        if (result.IsSuccess)
+        {
+            _currentPage++;
+            _nextPageToken = result.Value.NextPageToken;
+            var newFiles = await LoadFileDetails(result.Value.Items);
+            _uploadedFiles?.AddRange(newFiles);
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task<List<UploadedFile>> LoadFileDetails(IReadOnlyList<IStorageReference> items)
+    {
+        var files = new List<UploadedFile>();
+        foreach (var item in items)
+        {
+            var urlResult = await item.GetDownloadUrlAsync();
+            var metadataResult = await item.GetMetadataAsync();
+
+            files.Add(new UploadedFile
+            {
+                Name = item.Name,
+                Path = item.FullPath,
+                DownloadUrl = urlResult.IsSuccess ? urlResult.Value : null,
+                Metadata = metadataResult.IsSuccess ? metadataResult.Value : null
+            });
+        }
+        return files;
+    }
+
+    private async Task DeleteFile(string path)
+    {
+        _isLoading = true;
+
+        var result = await Firebase.Storage.Ref(path).DeleteAsync();
+
+        if (result.IsSuccess)
+        {
+            _uploadedFiles?.RemoveAll(f => f.Path == path);
+            _successMessage = "File deleted successfully!";
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isLoading = false;
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task UploadString()
+    {
+        if (string.IsNullOrWhiteSpace(_stringContent)) return;
+
+        _isUploadingString = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        var fileName = $"uploads/{Guid.NewGuid():N}_{_stringFileName}";
+        var storageRef = Firebase.Storage.Ref(fileName);
+
+        var result = await storageRef.PutStringAsync(
+            _stringContent,
+            _stringFormat,
+            new StorageMetadata { ContentType = GetContentType() });
+
+        if (result.IsSuccess)
+        {
+            _successMessage = $"String uploaded successfully as '{_stringFileName}'!";
+            _uploadedFiles?.Add(new UploadedFile
+            {
+                Name = _stringFileName,
+                Path = result.Value.FullPath,
+                DownloadUrl = result.Value.DownloadUrl
+            });
+            _stringContent = "";
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isUploadingString = false;
+    }
+
+    private string GetPlaceholder() => _stringFormat switch
+    {
+        StringFormat.Raw => "Enter your text content here...",
+        StringFormat.Base64 => "SGVsbG8sIFdvcmxkIQ== (Base64 encoded)",
+        StringFormat.DataUrl => "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==",
+        _ => "Enter content..."
+    };
+
+    private string GetContentType() => _stringFormat switch
+    {
+        StringFormat.DataUrl => "application/octet-stream",
+        _ => "text/plain"
+    };
+
+    private void ShowMetadata(UploadedFile file)
+    {
+        _selectedFileForMetadata = file;
+        _editCacheControl = file.Metadata?.CacheControl ?? "";
+        _editContentDisposition = file.Metadata?.ContentDisposition ?? "";
+        _showMetadataModal = true;
+    }
+
+    private void CloseMetadataModal()
+    {
+        _showMetadataModal = false;
+        _selectedFileForMetadata = null;
+    }
+
+    private async Task UpdateMetadata()
+    {
+        if (_selectedFileForMetadata is null) return;
+
+        _isUpdatingMetadata = true;
+        _errorMessage = null;
+
+        var storageRef = Firebase.Storage.Ref(_selectedFileForMetadata.Path);
+        var newMetadata = new StorageMetadata
+        {
+            CacheControl = string.IsNullOrWhiteSpace(_editCacheControl) ? null : _editCacheControl,
+            ContentDisposition = string.IsNullOrWhiteSpace(_editContentDisposition) ? null : _editContentDisposition
+        };
+
+        var result = await storageRef.UpdateMetadataAsync(newMetadata);
+
+        if (result.IsSuccess)
+        {
+            _successMessage = "Metadata updated successfully!";
+            _selectedFileForMetadata.Metadata = result.Value;
+            CloseMetadataModal();
+        }
+        else
+        {
+            _errorMessage = result.Error?.Message;
+        }
+
+        _isUpdatingMetadata = false;
+    }
+
+    private async Task DownloadAsStream(UploadedFile file)
+    {
+        _showStreamModal = true;
+        _isLoadingStream = true;
+        _streamContent = "";
+        _streamContentSize = 0;
+        StateHasChanged();
+
+        var storageRef = Firebase.Storage.Ref(file.Path);
+        var result = await storageRef.GetStreamAsync(1024 * 100); // 100KB max for demo
+
+        if (result.IsSuccess)
+        {
+            using var reader = new System.IO.StreamReader(result.Value);
+            _streamContent = await reader.ReadToEndAsync();
+            _streamContentSize = _streamContent.Length;
+        }
+        else
+        {
+            _streamContent = $"Error: {result.Error?.Message}";
+        }
+
+        _isLoadingStream = false;
+    }
+
+    public class UploadedFile
+    {
+        public string Name { get; set; } = "";
+        public string Path { get; set; } = "";
+        public string? DownloadUrl { get; set; }
+        public StorageMetadata? Metadata { get; set; }
+    }
+}
