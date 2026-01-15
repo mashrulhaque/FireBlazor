@@ -4,10 +4,11 @@
 
 A comprehensive, type-safe Firebase SDK for Blazor WebAssembly applications. FireBlazor provides first-class .NET integration with Firebase services including Authentication, Cloud Firestore, Cloud Storage, Realtime Database, App Check, and Firebase AI Logic (Gemini).
 
-[![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET 8.0+](https://img.shields.io/badge/.NET-8.0%20|%209.0%20|%2010.0-512BD4)](https://dotnet.microsoft.com/)
 [![NuGet](https://img.shields.io/nuget/v/FireBlazor.svg)](https://www.nuget.org/packages/FireBlazor)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/FireBlazor.svg)](https://www.nuget.org/packages/FireBlazor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/user/FireBlazor?style=social)](https://github.com/user/FireBlazor)
+[![GitHub stars](https://img.shields.io/github/stars/mashrulhaque/FireBlazor?style=social)](https://github.com/mashrulhaque/FireBlazor)
 
 ---
 
@@ -625,11 +626,11 @@ FireBlazor is actively maintained and used in production applications. Check the
 
 ### How do I report bugs or request features?
 
-Please use [GitHub Issues](https://github.com/user/FireBlazor/issues) for bug reports and feature requests.
+Please use [GitHub Issues](https://github.com/mashrulhaque/FireBlazor/issues) for bug reports and feature requests.
 
 ## Requirements
 
-- .NET 9.0 or later
+- .NET 8.0, 9.0, or 10.0
 - Blazor WebAssembly
 - Firebase project with desired services enabled
 
@@ -648,8 +649,8 @@ Please use [GitHub Issues](https://github.com/user/FireBlazor/issues) for bug re
 
 ## Community
 
-- [GitHub Discussions](https://github.com/user/FireBlazor/discussions) - Ask questions and share ideas
-- [GitHub Issues](https://github.com/user/FireBlazor/issues) - Report bugs and request features
+- [GitHub Discussions](https://github.com/mashrulhaque/FireBlazor/discussions) - Ask questions and share ideas
+- [GitHub Issues](https://github.com/mashrulhaque/FireBlazor/issues) - Report bugs and request features
 - [Changelog](CHANGELOG.md) - See what's new
 
 ## Support the Project
