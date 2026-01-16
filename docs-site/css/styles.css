@@ -424,8 +424,10 @@ strong {
 /* Code Preview */
 .hero-code {
   max-width: 700px;
+  width: 100%;
   margin: 0 auto;
   text-align: left;
+  overflow: hidden;
 }
 
 .code-window {
@@ -434,6 +436,7 @@ strong {
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-xl);
+  max-width: 100%;
 }
 
 .code-header {
@@ -655,6 +658,11 @@ code {
   margin-bottom: var(--spacing-md);
 }
 
+.step-content {
+  overflow: hidden;
+  min-width: 0;
+}
+
 .step-content .code-window {
   margin-top: var(--spacing-md);
 }
@@ -731,6 +739,8 @@ code {
   margin-left: var(--sidebar-width);
   padding: var(--spacing-2xl) var(--spacing-3xl);
   max-width: calc(100% - var(--sidebar-width));
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 .docs-content > * {
@@ -762,6 +772,8 @@ code {
   overflow-x: auto;
   margin: var(--spacing-lg) 0;
   position: relative;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .docs-content pre code {
@@ -1028,6 +1040,53 @@ pre:hover .copy-btn {
 
   .nav {
     display: none;
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--bg-tertiary);
+    flex-direction: column;
+    padding: var(--spacing-md);
+    gap: var(--spacing-xs);
+    z-index: 998;
+  }
+
+  .nav.open {
+    display: flex;
+  }
+
+  .nav .dropdown-menu {
+    position: static;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    margin-top: var(--spacing-xs);
+    box-shadow: none;
+    border: none;
+    background: var(--bg-tertiary);
+  }
+
+  /* Fix codeblock overflow on mobile */
+  pre,
+  .code-window,
+  .code-body {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .code-body {
+    overflow-x: auto;
+  }
+
+  .docs-content pre code {
+    display: block;
+    overflow-x: auto;
   }
 
   .hero {
